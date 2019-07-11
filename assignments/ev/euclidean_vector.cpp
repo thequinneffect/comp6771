@@ -3,7 +3,9 @@
 #include <algorithm>  // these are helpful https://en.cppreference.com/w/cpp/algorithm
 #include <cassert>
 #include <iterator>
+#include <list>
 #include <memory>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -61,7 +63,7 @@ EuclideanVector& EuclideanVector::operator=(EuclideanVector&& recyclee) noexcept
 /*
 ASK TUTOR: why in the provided move assign do they not delete magnitudes_ current memory? see below
             is there an implicit delete happening here?
-            
+
 operator=(EuclideanVector&& o) noexcept {
   magnitudes_ = std::move(o.magnitudes_);
   size_ = o.size_;
@@ -78,6 +80,69 @@ double EuclideanVector::operator[](int i) const // getter
 {
     assert(i >= 0 && i < dimensions_);
     return magnitudes_.get()[i];
+}
+
+/*
+#include <algorithm>
+ 
+template <class Type, size_t size>
+void addArrays(const Type(&a)[size],
+               const Type(&b)[size],
+               Type(&result)[size])
+{
+    std::transform(a, a + size, b, result, std::plus<Type>());
+} */
+
+EuclideanVector& EuclideanVector::operator+=(const EuclideanVector& other)
+{
+    if (dimensions_ != other.dimensions_) 
+    {
+        std::stringstream ss;
+        ss << "Dimensions of LHS(" << dimensions_ << ") and RHS(" << other.dimensions_ << ") do not match";
+        throw EuclideanVectorError(ss.str());
+    }
+    std::transform(magnitudes_.get(), magnitudes_.get() + dimensions_, other.magnitudes_.get(), magnitudes_.get(), std::plus<double>());
+    return *this;
+}
+
+EuclideanVector& EuclideanVector::operator-=(const EuclideanVector& other)
+{
+    if (dimensions_ != other.dimensions_) 
+    {
+        std::stringstream ss;
+        ss << "Dimensions of LHS(" << dimensions_ << ") and RHS(" << other.dimensions_ << ") do not match";
+        throw EuclideanVectorError(ss.str());
+    }
+    std::transform(magnitudes_.get(), magnitudes_.get() + dimensions_, other.magnitudes_.get(), magnitudes_.get(), std::minus<double>());
+    return *this;
+}
+
+EuclideanVector& EuclideanVector::operator*=(const double scaler)
+{
+    //std::transform(myarray.begin(), myarray.end(), myarray.begin(), [myconstant](auto& c){return c*myconstant;});
+    std::transform(magnitudes_.get(), magnitudes_.get() + dimensions_, magnitudes_.get(), [scaler](double& mag){return mag*=scaler;});
+    return *this;
+}
+
+EuclideanVector& EuclideanVector::operator/=(const double scaler)
+{
+    if (scaler == 0.0) throw EuclideanVectorError("Invalid vector division by 0");
+    std::transform(magnitudes_.get(), magnitudes_.get() + dimensions_, magnitudes_.get(), [scaler](double& mag){return mag/=scaler;});
+    return *this;
+}
+
+EuclideanVector::operator std::vector<double>()
+{
+    std::vector<double> vec;
+    std::copy(magnitudes_.get(), magnitudes_.get()+dimensions_, vec.begin());
+    return vec;
+}
+
+EuclideanVector::operator std::list<double>()
+{
+    std::list<double> list;
+    std::copy(magnitudes_.get(), magnitudes_.get()+dimensions_, list.begin());
+    return list;
 }
 
 /* methods */

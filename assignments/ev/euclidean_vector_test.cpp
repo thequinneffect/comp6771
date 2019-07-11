@@ -520,6 +520,80 @@ SCENARIO("the move assignment operator should move the contents of an existing"
   }
 }
 
+SCENARIO("the subscript operator [] should have getter/setter semantics for non-const ev's "
+          "but only getter semantics for const ev's") {
+
+  GIVEN("a 1d non-const ev with unit magnitude") {
+    EuclideanVector ev {1, 1.0};
+    WHEN("we subscript access this ev and save the return in a reference") {
+      double& dr = ev[0];
+      THEN("the reference should be of unit value") {
+        REQUIRE(dr == 1.0);
+      }
+      AND_THEN("we should be able to set the value at the accessed index via this reference") {
+        dr = 6.0;
+        REQUIRE(ev[0] == 6.0);
+      }
+    }
+    AND_WHEN("we directly set the subcript access equal to a valid magnitude value") {
+      ev[0] = 9.0;
+      THEN("the value at the accessed index should have been updated") {
+        REQUIRE(ev[0] == 9.0);
+      }
+    }
+  }
+  GIVEN("an n dimensional non-const ev with non-uniform magnitudes") {
+    std::vector<double> vec = {5.0, 7.0, 3.0};
+    EuclideanVector ev {vec.begin(), vec.end()};
+    WHEN("we access the 0-indexed n indices we should be returned the value at those indices") {
+      REQUIRE(ev[0] == 5.0);
+      REQUIRE(ev[1] == 7.0);
+      REQUIRE(ev[2] == 3.0);
+      AND_WHEN("we use the subscript as the LHS of an assignment") {
+        ev[0] = 11.0;
+        ev[1] = 22.0;
+        ev[2] = 14.0;
+        THEN("the RHS values should be assigned to these respective indices") {
+          REQUIRE(ev[0] == 11.0);
+          REQUIRE(ev[1] == 22.0);
+          REQUIRE(ev[2] == 14.0);
+        }
+      }
+    }
+    AND_WHEN("we use subscripts as both the LHS and RHS of an assignment") {
+      ev[2] = 6.0;
+      REQUIRE(ev[2] == 6.0);
+      REQUIRE(ev[0] != 6.0);
+      ev[0] = ev[2];
+      THEN("the LHS subscript indice should have the same value as the RHS subscript indice") {
+        REQUIRE(ev[0] == 6.0);
+      }
+    }
+  }
+  GIVEN("a const ev") {
+    const EuclideanVector ev {2, 3.0};
+    WHEN("we subscipt access this const ev and store the return in a non-const variable") {
+      double mag_cpy = ev[0];
+      THEN("the double should have the value at the indexed indice") {
+        REQUIRE(mag_cpy == 3.0);
+        AND_WHEN("we change the value of this variable") {
+          mag_cpy = 7.0;
+          THEN("the ev at the originally indexed indice should not change") {
+            REQUIRE(mag_cpy == 7.0);
+            REQUIRE(ev[0] == 3.0);
+          }
+        }
+      }
+    }
+    AND_WHEN("we store the subscript access return in a const variable") {
+      const double c_mag_cpy = ev[1];
+      THEN("the const variable should have the value at that index") {
+        REQUIRE(c_mag_cpy == 3.0);
+      }
+    }
+  }
+}
+
 // CPP ME
 SCENARIO("what we are testing") {
 
