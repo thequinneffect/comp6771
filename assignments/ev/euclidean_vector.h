@@ -21,7 +21,7 @@ class EuclideanVector {
   EuclideanVector(int dimensions, double magnitudes); // i dimensions, all magnitudes double
   EuclideanVector(std::vector<double>::const_iterator begin, std::vector<double>::const_iterator end); // iterate over vector
   EuclideanVector(const EuclideanVector& original); // copy construct
-  EuclideanVector(EuclideanVector&& original) noexcept; // move construct ((1) noexcept as a failed move does not guarantee valid state)
+  EuclideanVector(EuclideanVector&& recyclee) noexcept; // move construct ((1) noexcept as a failed move does not guarantee valid state)
 
   /* dtor */
   ~EuclideanVector() noexcept = default; // TODO: is this correct?

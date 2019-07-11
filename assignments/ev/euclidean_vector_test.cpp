@@ -6,6 +6,13 @@
    to which you're certain you have covered all possibilities,
    and why you think your tests are that thorough.
 
+  - a lot of these tests are probably considered superfluous or a bit over the top and cautious,
+  the reason/justification I give for them is that i'm simply not comfortable with all the 
+  different ways things like construction, copying and moving can be performed (both in terms 
+  of how the code is written and how C++ does things under the hood)
+  TLDR: sorry the tests are so long and a bit superfluous in some cases but it was for my
+  peace of mind
+
 */
 
 #include "assignments/ev/euclidean_vector.h"
@@ -50,6 +57,13 @@ SCENARIO("the {dimension, magnitude} constructor should validly construct EV's")
         REQUIRE(ev[0] == 3.0);
       }
     }
+    WHEN("we pass {2, 3.0} and want to construct a const EV") {
+      const EuclideanVector ev {2, 3.0};
+      THEN("we should have a 2 dimension vector with 3.0 magnitudes for all dimensions") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == 3.0);
+      }
+    }
     WHEN("we pass {100, 200.0} i.e. creating a much larger dimension EV") {
       EuclideanVector ev {100, 200.0};
       THEN("we should have a 100 dimension vector with 200.0 magnitudes for all dimensions") {
@@ -78,6 +92,14 @@ SCENARIO("The default constructor should validly construct an EV object for all 
     }
     WHEN("we pass a value greater than 1 e.g. 2") {
       EuclideanVector ev {2};
+      THEN("2 should be used as the number of dimensions and magnitude 0.0") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == 0.0);
+        REQUIRE(ev[1] == 0.0); // explicitly on a new line so we know which of the two fail
+      }
+    }
+    WHEN("we pass a value greater than 1 e.g. 2 and want to create a const EV") {
+      const EuclideanVector ev {2};
       THEN("2 should be used as the number of dimensions and magnitude 0.0") {
         REQUIRE(ev.GetNumDimensions() == 2);
         REQUIRE(ev[0] == 0.0);
@@ -131,9 +153,147 @@ SCENARIO("The vector iterator constructor should validly construct EV objects wh
       }
     }
   }
+  GIVEN("a multi-element (3) vector<double> with differing elements") {
+    std::vector<double> vec {7.0, 8.0, 2.0};
+    WHEN("we construct a CONST ev via the vector's iterators") {
+      const EuclideanVector ev {vec.begin(), vec.end()};
+      THEN("the EV should have 3 dimensions with differing magnitudes, 7.0, 8.0 and 9.0") {
+        REQUIRE(ev.GetNumDimensions() == 3);
+        REQUIRE(ev[0] == 7.0);
+        REQUIRE(ev[1] == 8.0); 
+        REQUIRE(ev[2] == 2.0); // again, explicitly separate from above statement
+      }
+    }
+  }
+  GIVEN("a multi-element (3) CONST vector<double> with differing elements") {
+    const std::vector<double> vec {7.0, 8.0, 2.0};
+    WHEN("we construct an ev via the vector's iterators") {
+      EuclideanVector ev {vec.cbegin(), vec.cend()};
+      THEN("the EV should have 3 dimensions with differing magnitudes, 7.0, 8.0 and 9.0") {
+        REQUIRE(ev.GetNumDimensions() == 3);
+        REQUIRE(ev[0] == 7.0);
+        REQUIRE(ev[1] == 8.0); 
+        REQUIRE(ev[2] == 2.0); // again, explicitly separate from above statement
+      }
+    }
+  }
 }
 
-/* dtor testing */
+SCENARIO("the copy constructor should validly construct EV objects that are copies of existing"
+          " EV objects") {
+
+  GIVEN("already constructed non-const EV's") {
+    EuclideanVector ev01 {0}; // 0d
+    EuclideanVector ev02 {1}; // 1d, 0 mag
+    EuclideanVector ev03 {2}; // 2d, 0 mag
+    EuclideanVector ev04 {1, 2.0}; // 1d non-zero mag
+    EuclideanVector ev05 {2, 2.0}; // 2d non-zero same mag
+    std::vector<double> vec {3.0, 4.0}; 
+    EuclideanVector ev06 {vec.begin(), vec.end()}; // 2d non-zero diff mag 
+    WHEN("we copy construct") {
+      EuclideanVector ev11 {ev01};
+      EuclideanVector ev12 {ev02};
+      EuclideanVector ev13 {ev03};
+      EuclideanVector ev14 {ev04};
+      EuclideanVector ev15 {ev05};
+      EuclideanVector ev16 {ev06};
+      THEN("we should get EV's with copied fields") {
+        REQUIRE(ev11.GetNumDimensions() == 0);
+
+        REQUIRE(ev12.GetNumDimensions() == 1);
+        REQUIRE(ev12[0] == 0.0);
+
+        REQUIRE(ev13.GetNumDimensions() == 2);
+        REQUIRE(ev13[0] == 0.0);
+
+        REQUIRE(ev14.GetNumDimensions() == 1);
+        REQUIRE(ev14[0] == 2.0);
+
+        REQUIRE(ev15.GetNumDimensions() == 2);
+        REQUIRE(ev15[0] == 2.0);
+        REQUIRE(ev15[1] == 2.0);
+
+        REQUIRE(ev16.GetNumDimensions() == 2);
+        REQUIRE(ev16[0] == 3.0);
+        REQUIRE(ev16[1] == 4.0);
+      }
+    }
+  }
+  GIVEN("already constructed const EV's") {
+    const EuclideanVector ev01 {0}; // 0d
+    const EuclideanVector ev02 {1}; // 1d, 0 mag
+    const EuclideanVector ev03 {2}; // 2d, 0 mag
+    const EuclideanVector ev04 {1, 2.0}; // 1d non-zero mag
+    const EuclideanVector ev05 {2, 2.0}; // 2d non-zero same mag
+    const std::vector<double> vec {3.0, 4.0}; 
+    const EuclideanVector ev06 {vec.cbegin(), vec.cend()}; // 2d non-zero diff mag 
+    WHEN("we copy construct to non-const EV's") {
+      EuclideanVector ev11 {ev01};
+      EuclideanVector ev12 {ev02};
+      EuclideanVector ev13 {ev03};
+      EuclideanVector ev14 {ev04};
+      EuclideanVector ev15 {ev05};
+      EuclideanVector ev16 {ev06};
+      THEN("this should happed") {
+        REQUIRE(ev11.GetNumDimensions() == 0);
+
+        REQUIRE(ev12.GetNumDimensions() == 1);
+        REQUIRE(ev12[0] == 0.0);
+
+        REQUIRE(ev13.GetNumDimensions() == 2);
+        REQUIRE(ev13[0] == 0.0);
+
+        REQUIRE(ev14.GetNumDimensions() == 1);
+        REQUIRE(ev14[0] == 2.0);
+
+        REQUIRE(ev15.GetNumDimensions() == 2);
+        REQUIRE(ev15[0] == 2.0);
+        REQUIRE(ev15[1] == 2.0);
+
+        REQUIRE(ev16.GetNumDimensions() == 2);
+        REQUIRE(ev16[0] == 3.0);
+        REQUIRE(ev16[1] == 4.0);
+      }
+    }
+  }
+  GIVEN("an already constructed const EV") {
+    const EuclideanVector ev1 {2, 2.0}; // 2d non-zero same mag
+    WHEN("copy construct another const EV") {
+      const EuclideanVector ev2 {ev1};
+      THEN("ev2 should be a copy of ev1") {
+        REQUIRE(ev2.GetNumDimensions() == 2);
+        REQUIRE(ev2[0] == 2.0);
+        REQUIRE(ev2[1] == 2.0);
+      }
+    }
+  }
+}
+
+SCENARIO("the move constructor should re-use the resoures of pre-existing EV's"
+          " to create new valid EV's whilst leaving the originals valid") {
+
+  GIVEN("some setup") {
+
+    // do the setup
+    // make vars etc.
+    // REQUIRE(); some stuff
+    // REQUIRE();
+
+    WHEN("we do something on this setup") {
+
+      // do the something
+
+      THEN("this should happed") {
+        REQUIRE(1);
+        //REQUIRE(); that it happened
+        //REQUIRE();
+
+      }
+    }
+  }
+}
+
+/* dtor testing - this probably doesn't need to be done but oh well */
 SCENARIO("the default destructor should validly destruct all types of EV's") {
 
   GIVEN("various types of EV's") {

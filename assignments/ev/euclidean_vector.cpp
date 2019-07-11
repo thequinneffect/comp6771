@@ -4,10 +4,11 @@
 #include <cassert>
 #include <iterator>
 #include <memory>
+#include <utility>
 #include <vector>
 
 /* ctors */
-EuclideanVector::EuclideanVector(int i) : EuclideanVector(i, 0) {}
+EuclideanVector::EuclideanVector(int i) : EuclideanVector(i, 0.0) {}
 
 EuclideanVector::EuclideanVector(int dimensions, double magnitudes) : 
     dimensions_ {dimensions},
@@ -24,10 +25,19 @@ EuclideanVector::EuclideanVector(std::vector<double>::const_iterator begin,
     std::copy_n(begin, dimensions_, magnitudes_.get()); // ASK TUTOR: this works, but is it okay for .get to not be an iterator?
 }
 
-EuclideanVector::EuclideanVector(const EuclideanVector& original) {
-    
+EuclideanVector::EuclideanVector(const EuclideanVector& original) :
+    dimensions_ {original.dimensions_},
+    magnitudes_ { std::make_unique<double[]>(original.dimensions_) }
+{
+    std::copy_n(original.magnitudes_.get(), original.dimensions_, magnitudes_.get());
 }
 
+EuclideanVector::EuclideanVector(EuclideanVector&& recyclee) noexcept : 
+    dimensions_ {recyclee.dimensions_}, // don't need to std::move a primitive type
+    magnitudes_ { std::move(recyclee.magnitudes_) }
+{
+    recyclee.dimensions_ = 0;
+}
 
 /* operator overloads */
 double& EuclideanVector::operator[](int i) // setter
