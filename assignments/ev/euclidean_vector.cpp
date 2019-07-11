@@ -40,6 +40,15 @@ EuclideanVector::EuclideanVector(EuclideanVector&& recyclee) noexcept :
 }
 
 /* operator overloads */
+EuclideanVector& EuclideanVector::operator=(const EuclideanVector& original)
+{
+    dimensions_ = original.dimensions_;
+    magnitudes_.reset(nullptr);
+    magnitudes_ = std::make_unique<double[]>(original.dimensions_);
+    std::copy_n(original.magnitudes_.get(), original.dimensions_, magnitudes_.get());
+    return *this;
+}
+
 double& EuclideanVector::operator[](int i) // setter
 {
     assert(i >= 0 && i < dimensions_);

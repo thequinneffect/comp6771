@@ -13,6 +13,10 @@
   TLDR: sorry the tests are so long and a bit superfluous in some cases but it was for my
   peace of mind
 
+  - justification : for testing copy assignment operator= overload, I do not explicitly test that
+  the argument EV "const EuclideanVector& original" (i.e. the one being copied from) is unchanged
+  as the const keyword should enforce this to be the case.  
+
 */
 
 #include "assignments/ev/euclidean_vector.h"
@@ -272,22 +276,27 @@ SCENARIO("the copy constructor should validly construct EV objects that are copi
 SCENARIO("the move constructor should re-use the resoures of pre-existing EV's"
           " to create new valid EV's whilst leaving the originals valid") {
 
-  GIVEN("some setup") {
-
-    // do the setup
-    // make vars etc.
-    // REQUIRE(); some stuff
-    // REQUIRE();
-
-    WHEN("we do something on this setup") {
-
-      // do the something
-
-      THEN("this should happed") {
-        REQUIRE(1);
-        //REQUIRE(); that it happened
-        //REQUIRE();
-
+  GIVEN("a pre-constructed l-value EV") {
+    EuclideanVector recyclee {2, 3.0};
+    WHEN("we create a new ev by moving from the old one") {
+      EuclideanVector ev {std::move(recyclee)};
+      THEN("the new ev should have the resources of the old") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == 3.0);
+        REQUIRE(ev[1] == 3.0);
+      }
+      AND_THEN("the moved from ev should have 0 dimensions") {
+        REQUIRE(recyclee.GetNumDimensions() == 0);
+      }
+    }
+  }
+  GIVEN("an in-line constructed r-value EV") {
+    WHEN("we create a new ev via this r-value EV") {
+      EuclideanVector ev { EuclideanVector{2, 4.0} };
+      THEN("the new ev should have the resources of the old") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == 4.0);
+        REQUIRE(ev[1] == 4.0);
       }
     }
   }
@@ -318,26 +327,88 @@ SCENARIO("the default destructor should validly destruct all types of EV's") {
   }
 }
 
+/* testing operator overloads */
+
+SCENARIO("the copy assignment operator should copy the contents of an existing"
+          " argument EV into an existing caller EV") {
+
+  GIVEN("two existing EV's of the same dimensions and same uniform magnitudes") {
+    EuclideanVector ev1 = {2, 5.0};
+    EuclideanVector ev2 = {2, 5.0};
+    WHEN("we copy assign ev1 to ev2") {
+      ev1 = ev2;
+      THEN("ev1 should be a new copy of ev2 and ev2 should remain unchanged") {
+        REQUIRE(ev1.GetNumDimensions() == 2);
+        REQUIRE(ev1[0] == 5.0);
+        REQUIRE(ev1[1] == 5.0);
+      }
+    }
+  }
+  GIVEN("two existing EV's of the same dimensions and differing uniform magnitudes") {
+    EuclideanVector ev1 = {2, 5.0};
+    EuclideanVector ev2 = {2, 7.0};
+    WHEN("we copy assign ev1 to ev2") {
+      ev1 = ev2;
+      THEN("ev1 should be a new copy of ev2 and ev2 should remain unchanged") {
+        REQUIRE(ev1.GetNumDimensions() == 2);
+        REQUIRE(ev1[0] == 7.0);
+        REQUIRE(ev1[1] == 7.0);
+      }
+    }
+  }
+  /* this one has the nice added benefit of testing that new memory is
+   * actually allocated as a side-effect (smaller to larger dimension) */
+  GIVEN("two existing EV's of different dimensions (copied from ev is larger)"
+          "and differing uniform magnitudes") {
+    EuclideanVector ev1 = {1, 4.0};
+    EuclideanVector ev2 = {3, 9.0};
+    WHEN("we copy assign ev1 to ev2") {
+      ev1 = ev2;
+      THEN("ev1 should be increased in size to ev2's size, and have the same data") {
+        REQUIRE(ev1.GetNumDimensions() == 3);
+        REQUIRE(ev1[0] == 9.0);
+        REQUIRE(ev1[1] == 9.0);
+        REQUIRE(ev1[2] == 9.0);
+      }
+    }
+  }
+  GIVEN("two existing EV's of different dimensions (copied from ev is smaller)"
+          "and differing uniform magnitudes") {
+    EuclideanVector ev1 = {3, 4.0};
+    EuclideanVector ev2 = {1, 2.0};
+    WHEN("we copy assign ev1 to ev2") {
+      ev1 = ev2;
+      THEN("ev1 should be decreased in size to ev2's size, and have the same data") {
+        REQUIRE(ev1.GetNumDimensions() == 1);
+        REQUIRE(ev1[0] == 2.0);
+      }
+    }
+  }
+  GIVEN("two existing EV's with differing non-uniform magnitudes") {
+    std::vector<double> vec1 {1.0, 2.0, 3.0};
+    std::vector<double> vec2 {9.0, 8.0, 7.0};
+    EuclideanVector ev1 = {2, 5.0};
+    EuclideanVector ev2 = {2, 7.0};
+    WHEN("we copy assign ev1 to ev2") {
+      ev1 = ev2;
+      THEN("ev1 should be a new copy of ev2 and ev2 should remain unchanged") {
+        REQUIRE(ev1.GetNumDimensions() == 2);
+        REQUIRE(ev1[0] == 7.0);
+        REQUIRE(ev1[1] == 7.0);
+      }
+    }
+  }
+}
 
 // CPP ME
 SCENARIO("what we are testing") {
 
   GIVEN("some setup") {
 
-    // do the setup
-    // make vars etc.
-    // REQUIRE(); some stuff
-    // REQUIRE();
-
     WHEN("we do something on this setup") {
-
-      // do the something
 
       THEN("this should happed") {
         REQUIRE(1);
-        //REQUIRE(); that it happened
-        //REQUIRE();
-
       }
     }
   }
