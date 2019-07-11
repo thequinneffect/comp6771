@@ -17,8 +17,8 @@ class EuclideanVectorError : public std::exception {
 class EuclideanVector {
  public:
   /* ctors */
-  explicit EuclideanVector(int dimension = 1); // default dimension 1 ctor (i dimensions, all magnitudes 0)
-  EuclideanVector(int dimension, double magnitude); // i dimensions, all magnitudes double
+  explicit EuclideanVector(int dimensions = 1); // default dimension 1 ctor (i dimensions, all magnitudes 0)
+  EuclideanVector(int dimensions, double magnitudes); // i dimensions, all magnitudes double
   EuclideanVector(std::vector<double>::const_iterator begin, std::vector<double>::const_iterator end); // iterate over vector
   EuclideanVector(const EuclideanVector& original); // copy construct
   EuclideanVector(EuclideanVector&& original) noexcept; // move construct ((1) noexcept as a failed move does not guarantee valid state)
@@ -51,14 +51,14 @@ class EuclideanVector {
   /* methods */
   double at(int i) const;
   double& at(int i);
-  int GetNumDimensions();
+  int GetNumDimensions() const;
   double GetEuclideanNorm();
   EuclideanVector CreateUnitVector();
-
   
   // TODO(you): add more
  
  private:
+  int dimensions_;
   std::unique_ptr<double[]> magnitudes_;
   // TODO(you): add more
 };
