@@ -49,6 +49,26 @@ EuclideanVector& EuclideanVector::operator=(const EuclideanVector& original)
     return *this;
 }
 
+EuclideanVector& EuclideanVector::operator=(EuclideanVector&& recyclee) noexcept
+{
+    dimensions_ = recyclee.dimensions_;
+    magnitudes_.reset(nullptr);
+    magnitudes_ = std::move(recyclee.magnitudes_);
+    recyclee.dimensions_ = 0;
+    return *this;
+}
+
+/*
+ASK TUTOR: why in the provided move assign do they not delete magnitudes_ current memory? see below
+            is there an implicit delete happening here?
+            
+operator=(EuclideanVector&& o) noexcept {
+  magnitudes_ = std::move(o.magnitudes_);
+  size_ = o.size_;
+  o.size = 0;
+}
+ */
+
 double& EuclideanVector::operator[](int i) // setter
 {
     assert(i >= 0 && i < dimensions_);

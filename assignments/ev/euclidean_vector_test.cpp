@@ -356,7 +356,7 @@ SCENARIO("the copy assignment operator should copy the contents of an existing"
       }
     }
   }
-  /* this one has the nice added benefit of testing that new memory is
+  /* these ones have the nice added benefit of testing that new memory is
    * actually allocated as a side-effect (smaller to larger dimension) */
   GIVEN("two existing EV's of different dimensions (copied from ev is larger)"
           "and differing uniform magnitudes") {
@@ -384,17 +384,137 @@ SCENARIO("the copy assignment operator should copy the contents of an existing"
       }
     }
   }
-  GIVEN("two existing EV's with differing non-uniform magnitudes") {
+  GIVEN("two existing EV's of same size with differing non-uniform magnitudes") {
     std::vector<double> vec1 {1.0, 2.0, 3.0};
+    EuclideanVector ev1 = {vec1.begin(), vec1.end()};
     std::vector<double> vec2 {9.0, 8.0, 7.0};
-    EuclideanVector ev1 = {2, 5.0};
-    EuclideanVector ev2 = {2, 7.0};
+    EuclideanVector ev2 = {vec2.begin(), vec2.end()};
     WHEN("we copy assign ev1 to ev2") {
       ev1 = ev2;
       THEN("ev1 should be a new copy of ev2 and ev2 should remain unchanged") {
+        REQUIRE(ev1.GetNumDimensions() == 3);
+        REQUIRE(ev1[0] == 9.0);
+        REQUIRE(ev1[1] == 8.0);
+        REQUIRE(ev1[2] == 7.0);
+      }
+    }
+  }
+  GIVEN("two existing EV's of different size with differing magnitudes") {
+    EuclideanVector ev1 = {1, 2.0};
+    std::vector<double> vec2 {5.0, 4.0, 3.0};
+    EuclideanVector ev2 = {vec2.begin(), vec2.end()};
+    WHEN("we copy assign ev1 to ev2") {
+      ev1 = ev2;
+      THEN("ev1 should be a new copy of ev2 and ev2 should remain unchanged") {
+        REQUIRE(ev1.GetNumDimensions() == 3);
+        REQUIRE(ev1[0] == 5.0);
+        REQUIRE(ev1[1] == 4.0);
+        REQUIRE(ev1[2] == 3.0);
+      }
+    }
+  }
+}
+
+SCENARIO("the move assignment operator should move the contents of an existing"
+          " argument EV into an existing caller EV after deleting its current data") {
+
+  GIVEN("two existing EV's of the same dimensions and same uniform magnitudes") {
+    EuclideanVector ev1 = {2, 5.0};
+    EuclideanVector ev2 = {2, 5.0};
+    WHEN("we move assign ev1 to ev2") {
+      ev1 = std::move(ev2);
+      THEN("ev1 should repurpose ev2's data and ev2 should have 0 dimensions") {
+        REQUIRE(ev1.GetNumDimensions() == 2);
+        REQUIRE(ev1[0] == 5.0);
+        REQUIRE(ev1[1] == 5.0);
+        REQUIRE(ev2.GetNumDimensions() == 0);
+      }
+    }
+  }
+  GIVEN("two existing EV's of the same dimensions and differing uniform magnitudes") {
+    EuclideanVector ev1 = {2, 5.0};
+    EuclideanVector ev2 = {2, 7.0};
+    WHEN("we move assign ev1 to ev2") {
+      ev1 = std::move(ev2);
+      THEN("ev1 should repurpose ev2's data and ev2 should have 0 dimensions") {
         REQUIRE(ev1.GetNumDimensions() == 2);
         REQUIRE(ev1[0] == 7.0);
         REQUIRE(ev1[1] == 7.0);
+        REQUIRE(ev2.GetNumDimensions() == 0);
+      }
+    }
+  }
+  GIVEN("one existing EV") {
+    EuclideanVector ev1 = {2, 5.0};
+    WHEN("we move assign ev1 to an r-value ev of differing dimension and magnitudes") {
+      std::vector<double> vec {4.0, 2.0, 0.0};
+      ev1 = EuclideanVector{vec.begin(), vec.end()};
+      THEN("ev1 should repurpose ev2's data and ev2 doesn't exist anymore") {
+        REQUIRE(ev1.GetNumDimensions() == 3);
+        REQUIRE(ev1[0] == 4.0);
+        REQUIRE(ev1[1] == 2.0);
+        REQUIRE(ev1[2] == 0.0);
+      }
+    }
+  }
+  /* these ones have the nice added benefit of testing that the memory is
+   * actually "moved" as a side-effect (smaller to larger dimension) */
+  GIVEN("two existing EV's of different dimensions (moved from ev is larger)"
+          "and differing uniform magnitudes") {
+    EuclideanVector ev1 = {1, 4.0};
+    EuclideanVector ev2 = {3, 9.0};
+    WHEN("we move assign ev1 to ev2") {
+      ev1 = std::move(ev2);
+      THEN("ev1 should become larger, repurposing ev2's data. ev2 should have 0 dimensions") {
+        REQUIRE(ev1.GetNumDimensions() == 3);
+        REQUIRE(ev1[0] == 9.0);
+        REQUIRE(ev1[1] == 9.0);
+        REQUIRE(ev1[2] == 9.0);
+        REQUIRE(ev2.GetNumDimensions() == 0);
+      }
+    }
+  }
+  GIVEN("two existing EV's of different dimensions (copied from ev is smaller)"
+          "and differing uniform magnitudes") {
+    EuclideanVector ev1 = {3, 4.0};
+    EuclideanVector ev2 = {1, 2.0};
+    WHEN("we move assign ev1 to ev2") {
+      ev1 = std::move(ev2);
+      THEN("ev1 should become smaller, repurposing ev2's data. ev2 should be 0 dimensional") {
+        REQUIRE(ev1.GetNumDimensions() == 1);
+        REQUIRE(ev1[0] == 2.0);
+        REQUIRE(ev2.GetNumDimensions() == 0);
+      }
+    }
+  }
+  GIVEN("two existing EV's of same size with differing non-uniform magnitudes") {
+    std::vector<double> vec1 {1.0, 2.0, 3.0};
+    EuclideanVector ev1 = {vec1.begin(), vec1.end()};
+    std::vector<double> vec2 {9.0, 8.0, 7.0};
+    EuclideanVector ev2 = {vec2.begin(), vec2.end()};
+    WHEN("we move assign ev1 to ev2") {
+      ev1 = std::move(ev2);
+      THEN("ev1 should repurpose ev2's data and ev2 should be 0 dimensional") {
+        REQUIRE(ev1.GetNumDimensions() == 3);
+        REQUIRE(ev1[0] == 9.0);
+        REQUIRE(ev1[1] == 8.0);
+        REQUIRE(ev1[2] == 7.0);
+        REQUIRE(ev2.GetNumDimensions() == 0);
+      }
+    }
+  }
+  GIVEN("two existing EV's of different size with differing magnitudes") {
+    EuclideanVector ev1 = {1, 2.0};
+    std::vector<double> vec2 {5.0, 4.0, 3.0};
+    EuclideanVector ev2 = {vec2.begin(), vec2.end()};
+    WHEN("we move assign ev1 to ev2") {
+      ev1 = std::move(ev2);
+      THEN("ev1 should repurpose ev2's data and ev2 should be 0 dimensional") {
+        REQUIRE(ev1.GetNumDimensions() == 3);
+        REQUIRE(ev1[0] == 5.0);
+        REQUIRE(ev1[1] == 4.0);
+        REQUIRE(ev1[2] == 3.0);
+        REQUIRE(ev2.GetNumDimensions() == 0);
       }
     }
   }
