@@ -2,9 +2,11 @@
 
 #include <algorithm>  // these are helpful https://en.cppreference.com/w/cpp/algorithm
 #include <cassert>
+#include <cmath>
 #include <iterator>
 #include <list>
 #include <memory>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -105,7 +107,7 @@ EuclideanVector& EuclideanVector::operator*=(const double scaler)
 
 EuclideanVector& EuclideanVector::operator/=(const double scaler)
 {
-    if (scaler == 0.0) throw EuclideanVectorError("Invalid vector division by 0");
+    if (scaler == 0) throw EuclideanVectorError("Invalid vector division by 0");
     std::transform(magnitudes_.get(), magnitudes_.get() + dimensions_, magnitudes_.get(), [scaler](double& mag){return mag/=scaler;});
     return *this;
 }
@@ -113,19 +115,64 @@ EuclideanVector& EuclideanVector::operator/=(const double scaler)
 EuclideanVector::operator std::vector<double>()
 {
     std::vector<double> vec;
-    std::copy(magnitudes_.get(), magnitudes_.get()+dimensions_, vec.begin());
+    vec.reserve(dimensions_);
+    std::copy(magnitudes_.get(), magnitudes_.get()+dimensions_, std::back_inserter(vec));
     return vec;
 }
 
 EuclideanVector::operator std::list<double>()
 {
     std::list<double> list;
-    std::copy(magnitudes_.get(), magnitudes_.get()+dimensions_, list.begin());
+    std::copy(magnitudes_.get(), magnitudes_.get()+dimensions_, std::back_inserter(list));
     return list;
 }
 
 /* methods */
+double EuclideanVector::at(int i) const // setter
+{
+    if (i < 0 || i >= dimensions_)
+    {
+        std::stringstream ss;
+        ss << "Index " << i << " is not valid for this EuclideanVector object";
+        throw EuclideanVectorError(ss.str());
+    }
+    return magnitudes_.get()[i];
+}
+
+double& EuclideanVector::at(int i) // getter
+{
+    if (i < 0 || i >= dimensions_)
+    {
+        std::stringstream ss;
+        ss << "Index " << i << " is not valid for this EuclideanVector object";
+        throw EuclideanVectorError(ss.str());
+    }
+    return magnitudes_.get()[i];
+}
+
 int EuclideanVector::GetNumDimensions() const
 {
     return this->dimensions_;
+}
+
+double EuclideanVector::GetEuclideanNorm() const
+{
+    if (dimensions_ == 0) 
+        throw EuclideanVectorError("EuclideanVector with no dimensions does not have a norm");
+    std::vector<double> squares;
+    squares.reserve(dimensions_);
+    std::transform(magnitudes_.get(), magnitudes_.get()+dimensions_, squares.begin(), [](double mag){return mag*mag;});
+    return std::sqrt(std::accumulate(squares.begin(), squares.end(), 0));
+}
+
+EuclideanVector EuclideanVector::CreateUnitVector()
+{
+    if (dimensions_ == 0)
+        throw EuclideanVectorError("EuclideanVector with no dimensions does not have a norm");
+    double norm = this->GetEuclideanNorm();
+    if (norm == 0) 
+        throw EuclideanVectorError("EuclideanVector with euclidean normal of 0 does not have a unit vector");
+    EuclideanVector unit_vec {dimensions_};
+    std::transform(magnitudes_.get(), magnitudes_.get()+dimensions_, unit_vec.magnitudes_.get(), [norm](double mag){return mag/norm;});
+    return unit_vec;
 }

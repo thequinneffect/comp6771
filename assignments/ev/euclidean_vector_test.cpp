@@ -13,6 +13,14 @@
   TLDR: sorry the tests are so long and a bit superfluous in some cases but it was for my
   peace of mind
 
+  - say there are x different possible cases to test in your system. Then in an ideal world
+  you would only write x tests. However, some edge cases are hard to think of, and sometimes
+  it's not easy to see if a test is meaningfull or not. Given this, my basic approach to testing
+  for this assignment (and because i'm very new to lots of these c++ concepts e.g. operator overloading, 
+  different constructor types etc.) has been to try and test as many different cases as I can. I've tried
+  to only include tests that are doing something fundamentally different to all other tests but 
+  i've allowed for possible meaningless tests as i'm more concerned with covering the x cases.
+
   - justification : for testing copy assignment operator= overload, I do not explicitly test that
   the argument EV "const EuclideanVector& original" (i.e. the one being copied from) is unchanged
   as the const keyword should enforce this to be the case.  
@@ -20,9 +28,12 @@
 */
 
 #include "assignments/ev/euclidean_vector.h"
-#include "catch.h"
 
+#include <iterator>
+#include <list>
 #include <vector>
+
+#include "catch.h"
 
 /* ctor testing */
 
@@ -614,6 +625,442 @@ SCENARIO("the subscript operator [] should have getter/setter semantics for non-
       const double c_mag_cpy = ev[1];
       THEN("the const variable should have the value at that index") {
         REQUIRE(c_mag_cpy == 3.0);
+      }
+    }
+  }
+}
+
+/* NOTE: after seeing the spec  */
+
+SCENARIO("operator +=") {
+
+  GIVEN("two EV's of different dimension") {
+    EuclideanVector a = {2, 1.0};
+    EuclideanVector b {3, 5.0};
+    WHEN("we try to += them") {
+       REQUIRE_THROWS_WITH(a += b, "Dimensions of LHS(2) and RHS(3) do not match");
+    }
+  }
+  GIVEN("two EV's of the same dimension and uniform magnitudes") {
+    EuclideanVector a = {2, 1.0};
+    EuclideanVector b {2, 5.0};
+    WHEN("we try to += them") {
+        a += b;
+        THEN("a should have b's magnitudes added to it, and b unchanged") {
+          REQUIRE(a.GetNumDimensions() == 2);
+          REQUIRE(a[0] == 6.0);
+          REQUIRE(a[1] == 6.0);
+          REQUIRE(b.GetNumDimensions() == 2);
+          REQUIRE(b[0] == 5.0);
+          REQUIRE(b[1] == 5.0);
+       }
+    }
+  }
+  GIVEN("two EV's of the same dimension and different magnitudes") {
+    EuclideanVector a {2};
+    EuclideanVector b {2};
+    a[0] = 2.0;
+    a[1] = 4.0;
+    b[0] = 5.0;
+    b[1] = 10.0;
+    WHEN("we try to += them") {
+        a += b;
+        THEN("a should have b's magnitudes added to it, and b unchanged") {
+          REQUIRE(a.GetNumDimensions() == 2);
+          REQUIRE(a[0] == 7.0);
+          REQUIRE(a[1] == 14.0);
+          REQUIRE(b.GetNumDimensions() == 2);
+          REQUIRE(b[0] == 5.0);
+          REQUIRE(b[1] == 10.0);
+       }
+    }
+  }
+  GIVEN("a const RHS ev") {
+    EuclideanVector a = {2, 1.0};
+    a[1] = 3.0;
+    const EuclideanVector b {2, 2.0};
+    WHEN("we try to += them") {
+      a += b;
+      THEN("a should have b's magnitudes added to it") {
+        REQUIRE(a.GetNumDimensions() == 2);
+        REQUIRE(a[0] == 3.0);
+        REQUIRE(a[1] == 5.0);
+        // not crashing is enough to know b wasn't changed
+      }
+    }
+  }
+}
+
+SCENARIO("operator -=") {
+
+  GIVEN("two EV's of different dimension") {
+    EuclideanVector a = {2, 1.0};
+    EuclideanVector b {3, 5.0};
+    WHEN("we try to -= them") {
+       REQUIRE_THROWS_WITH(a -= b, "Dimensions of LHS(2) and RHS(3) do not match");
+    }
+  }
+  GIVEN("two EV's of the same dimension and uniform magnitudes") {
+    EuclideanVector a = {2, 5.0};
+    EuclideanVector b {2, 2.0};
+    WHEN("we try to -= them") {
+        a -= b;
+        THEN("a should have b's magnitudes subtracted from it, and b unchanged") {
+          REQUIRE(a.GetNumDimensions() == 2);
+          REQUIRE(a[0] == 3.0);
+          REQUIRE(a[1] == 3.0);
+          REQUIRE(b.GetNumDimensions() == 2);
+          REQUIRE(b[0] == 2.0);
+          REQUIRE(b[1] == 2.0);
+       }
+    }
+  }
+  GIVEN("two EV's of the same dimension and different magnitudes") {
+    EuclideanVector a {2};
+    EuclideanVector b {2};
+    a[0] = 5.0;
+    a[1] = 10.0;
+    b[0] = 2.0;
+    b[1] = 4.0;
+    WHEN("we try to -= them") {
+        a -= b;
+        THEN("a should have b's magnitudes subtracted from it, and b unchanged") {
+          REQUIRE(a.GetNumDimensions() == 2);
+          REQUIRE(a[0] == 3.0);
+          REQUIRE(a[1] == 6.0);
+          REQUIRE(b.GetNumDimensions() == 2);
+          REQUIRE(b[0] == 2.0);
+          REQUIRE(b[1] == 4.0);
+       }
+    }
+  }
+  GIVEN("a const RHS ev") {
+    EuclideanVector a = {2, 6.0};
+    a[1] = 3.0;
+    const EuclideanVector b {2, 2.0};
+    WHEN("we try to -= them") {
+      a -= b;
+      THEN("a should have b's magnitudes subtracted from it") {
+        REQUIRE(a.GetNumDimensions() == 2);
+        REQUIRE(a[0] == 4.0);
+        REQUIRE(a[1] == 1.0);
+        // not crashing is enough to know b wasn't changed
+      }
+    }
+  }
+}
+
+SCENARIO("operator *=") {
+
+  GIVEN("a UV with magnitudes of 0.0") {
+    EuclideanVector ev {2};
+    WHEN("we multiply by any scaler") {
+      ev *= 2;
+      THEN("we should still have magnitudes of 0.0") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == 0.0);
+        REQUIRE(ev[1] == 0.0);
+      }
+    }
+  }
+  GIVEN("a UV with non-zero magnitudes") {
+    EuclideanVector ev {2, 3.0};
+    ev[1] = 5.0;
+    WHEN("we multiply by any positive scaler") {
+      ev *= 2;
+      THEN("each magnitude should be scaled by that scaler") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == 6.0);
+        REQUIRE(ev[1] == 10.0);
+      }
+    }
+    AND_WHEN("we multiply by any negative scaler") {
+      ev *= -2;
+      THEN("each magnitude should be scaled by that scaler") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == -6.0);
+        REQUIRE(ev[1] == -10.0);
+      }
+    }
+    AND_WHEN("we multiply by a zero scaler") {
+      ev *= 0;
+      THEN("each magnitude should be 0") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == 0);
+        REQUIRE(ev[1] == 0);
+      }
+    }
+  }
+}
+
+SCENARIO("operator /=") {
+
+  GIVEN("a vector") {
+    EuclideanVector ev = {2, 1.0};
+    WHEN("we try to divide with a 0 scaler") {
+       REQUIRE_THROWS_WITH(ev /= 0, "Invalid vector division by 0");
+    }
+  }
+
+  GIVEN("a UV with magnitudes of 0.0") {
+    EuclideanVector ev {2};
+    WHEN("we divide by any valid scaler") {
+      ev /= 2;
+      THEN("we should still have magnitudes of 0.0") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == 0.0);
+        REQUIRE(ev[1] == 0.0);
+      }
+    }
+  }
+  GIVEN("a UV with non-zero magnitudes") {
+    EuclideanVector ev {2, 4.0};
+    ev[1] = 6.0;
+    WHEN("we divide by any positive scaler") {
+      ev /= 2;
+      THEN("each magnitude should be divided by that scaler") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == 2.0);
+        REQUIRE(ev[1] == 3.0);
+      }
+    }
+    AND_WHEN("we divide by any negative scaler") {
+      ev /= -2;
+      THEN("each magnitude should be divided by that scaler") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == -2.0);
+        REQUIRE(ev[1] == -3.0);
+      }
+    }
+  }
+}
+
+SCENARIO("operator std::vector<double>") {
+
+  GIVEN("a zero dimensional ev") {
+    EuclideanVector ev {0};
+    WHEN("we cast this ev to a vector type") {
+      std::vector<double> vec = static_cast<std::vector<double>>(ev);
+      THEN("this vec should contain no elements") {
+        REQUIRE(vec.size() == 0);
+      }
+    }
+  }
+  GIVEN("a 1d ev") {
+    EuclideanVector ev {1, 2.0};
+    WHEN("we cast this ev to a vector type") {
+      std::vector<double> vec = static_cast<std::vector<double>>(ev);
+      THEN("this vec should contain one element of magnitude 2") {
+        REQUIRE(vec.size() == 1);
+        REQUIRE(vec.at(0) == 2.0);
+      }
+    }
+  }
+  GIVEN("a multi-dimensional ev") {
+    EuclideanVector ev {3, 1.0};
+    ev[1] = 3.0;
+    ev[2] = 2.0;
+    WHEN("we cast this ev to a vector type") {
+      std::vector<double> vec = static_cast<std::vector<double>>(ev);
+      THEN("this vec should contain three elements of corresponding magnitude") {
+        REQUIRE(vec.size() == 3);
+        REQUIRE(vec.at(0) == 1.0);
+        REQUIRE(vec.at(1) == 3.0);
+        REQUIRE(vec.at(2) == 2.0);
+      }
+    }
+  }
+}
+
+SCENARIO("operator std::list<double>") {
+
+  GIVEN("a zero dimensional ev") {
+    EuclideanVector ev {0};
+    WHEN("we cast this ev to a list type") {
+      std::list<double> list = static_cast<std::list<double>>(ev);
+      THEN("this list should contain no elements") {
+        REQUIRE(list.size() == 0);
+      }
+    }
+  }
+  GIVEN("a 1d ev") {
+    EuclideanVector ev {1, 2.0};
+    WHEN("we cast this ev to a list type") {
+      std::list<double> list = static_cast<std::list<double>>(ev);
+      THEN("this list should contain one element of magnitude 2") {
+        REQUIRE(list.size() == 1);
+        REQUIRE(list.front() == 2.0);
+      }
+    }
+  }
+  GIVEN("a multi-dimensional ev") {
+    EuclideanVector ev {3, 1.0};
+    ev[1] = 3.0;
+    ev[2] = 2.0;
+    WHEN("we cast this ev to a list type") {
+      std::list<double> list = static_cast<std::list<double>>(ev);
+      THEN("this list should contain three elements of corresponding magnitude") {
+        REQUIRE(list.size() == 3);
+        std::_List_iterator it = list.begin();
+        REQUIRE(*it++ == 1.0);
+        REQUIRE(*it++  == 3.0);
+        REQUIRE(*it == 2.0);
+      }
+    }
+  }
+}
+
+SCENARIO("friend operator ==") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
+      }
+    }
+  }
+}
+
+SCENARIO("friend operator !=") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
+      }
+    }
+  }
+}
+
+SCENARIO("friend operator +") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
+      }
+    }
+  }
+}
+
+SCENARIO("friend operator -") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
+      }
+    }
+  }
+}
+
+SCENARIO("friend operator ev * ev") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
+      }
+    }
+  }
+}
+
+SCENARIO("friend operator scaler * ev") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
+      }
+    }
+  }
+}
+
+SCENARIO("friend operator ev * scaler") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
+      }
+    }
+  }
+}
+
+SCENARIO("friend operator ev / scaler") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
+      }
+    }
+  }
+}
+
+SCENARIO("friend operator <<") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
+      }
+    }
+  }
+}
+
+SCENARIO("method at()") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
+      }
+    }
+  }
+}
+
+SCENARIO("method GetEuclideanNorm()") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
+      }
+    }
+  }
+}
+
+SCENARIO("method CreateUnitVector") {
+
+  GIVEN("some setup") {
+
+    WHEN("we do something on this setup") {
+
+      THEN("this should happed") {
+        REQUIRE(1);
       }
     }
   }

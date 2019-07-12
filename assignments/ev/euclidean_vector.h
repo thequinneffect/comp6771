@@ -51,7 +51,7 @@ class EuclideanVector {
     if (a.dimensions_ != b.dimensions_) return false;
     return std::equal(a.magnitudes_.get(), a.magnitudes_.get()+a.dimensions_, b.magnitudes_.get());
   }
-  
+
   friend bool operator!=(const EuclideanVector& a, const EuclideanVector& b)
   {
     return !(a == b);
@@ -110,7 +110,7 @@ class EuclideanVector {
 
   friend EuclideanVector operator/(const EuclideanVector& ev, double scaler)
   {
-    if (scaler == 0.0) throw EuclideanVectorError("Invalid vector division by 0");
+    if (scaler == 0) throw EuclideanVectorError("Invalid vector division by 0");
     EuclideanVector scaled_ev {ev.dimensions_};
     std::transform(ev.magnitudes_.get(), ev.magnitudes_.get()+ev.dimensions_, scaled_ev.magnitudes_.get(), [scaler](double mag){return mag/=scaler;});
     return scaled_ev;
@@ -128,7 +128,7 @@ class EuclideanVector {
   double at(int i) const;
   double& at(int i);
   int GetNumDimensions() const;
-  double GetEuclideanNorm();
+  double GetEuclideanNorm() const;
   EuclideanVector CreateUnitVector();
   
   // TODO(you): add more
