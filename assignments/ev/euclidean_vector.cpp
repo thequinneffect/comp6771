@@ -6,6 +6,7 @@
 #include <list>
 #include <memory>
 #include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -16,7 +17,7 @@ EuclideanVector::EuclideanVector(int dimensions, double magnitudes) :
     dimensions_ {dimensions},
     magnitudes_ { std::make_unique<double[]>(dimensions) } // value initialises i.e. 0.0 values
 {
-    if (magnitudes) std::fill_n(magnitudes_.get(), dimensions_, magnitudes); // ASK TUTOR: this works, but is it okay for .get to not be an iterator?
+    std::fill_n(magnitudes_.get(), dimensions_, magnitudes);
 }
 
 EuclideanVector::EuclideanVector(std::vector<double>::const_iterator begin, 
@@ -24,7 +25,7 @@ EuclideanVector::EuclideanVector(std::vector<double>::const_iterator begin,
     dimensions_ { static_cast<int>(std::distance(begin, end)) },
     magnitudes_ { std::make_unique<double[]>(dimensions_) }
 {
-    std::copy_n(begin, dimensions_, magnitudes_.get()); // ASK TUTOR: this works, but is it okay for .get to not be an iterator?
+    std::copy_n(begin, dimensions_, magnitudes_.get());
 }
 
 EuclideanVector::EuclideanVector(const EuclideanVector& original) :
@@ -45,7 +46,7 @@ EuclideanVector::EuclideanVector(EuclideanVector&& recyclee) noexcept :
 EuclideanVector& EuclideanVector::operator=(const EuclideanVector& original)
 {
     dimensions_ = original.dimensions_;
-    magnitudes_.reset(nullptr);
+    // magnitudes_.reset(nullptr);
     magnitudes_ = std::make_unique<double[]>(original.dimensions_);
     std::copy_n(original.magnitudes_.get(), original.dimensions_, magnitudes_.get());
     return *this;
@@ -54,22 +55,11 @@ EuclideanVector& EuclideanVector::operator=(const EuclideanVector& original)
 EuclideanVector& EuclideanVector::operator=(EuclideanVector&& recyclee) noexcept
 {
     dimensions_ = recyclee.dimensions_;
-    magnitudes_.reset(nullptr);
+    //magnitudes_.reset(nullptr); // apparently this is not needed, smart pointer is smart enough to delete
     magnitudes_ = std::move(recyclee.magnitudes_);
     recyclee.dimensions_ = 0;
     return *this;
 }
-
-/*
-ASK TUTOR: why in the provided move assign do they not delete magnitudes_ current memory? see below
-            is there an implicit delete happening here?
-
-operator=(EuclideanVector&& o) noexcept {
-  magnitudes_ = std::move(o.magnitudes_);
-  size_ = o.size_;
-  o.size = 0;
-}
- */
 
 double& EuclideanVector::operator[](int i) // setter
 {
@@ -81,17 +71,6 @@ double EuclideanVector::operator[](int i) const // getter
     assert(i >= 0 && i < dimensions_);
     return magnitudes_.get()[i];
 }
-
-/*
-#include <algorithm>
- 
-template <class Type, size_t size>
-void addArrays(const Type(&a)[size],
-               const Type(&b)[size],
-               Type(&result)[size])
-{
-    std::transform(a, a + size, b, result, std::plus<Type>());
-} */
 
 EuclideanVector& EuclideanVector::operator+=(const EuclideanVector& other)
 {

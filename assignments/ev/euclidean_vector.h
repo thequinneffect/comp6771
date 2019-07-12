@@ -1,9 +1,15 @@
 // TODO(you): Include header guards
 
+#include <algorithm>
 #include <exception>
+#include <experimental/iterator>
+#include <iterator>
 #include <list>
-#include <string>
 #include <memory>
+#include <numeric>
+#include <sstream>
+#include <string>
+#include <utility>
 #include <vector>
 
 class EuclideanVectorError : public std::exception {
@@ -39,14 +45,84 @@ class EuclideanVector {
   explicit operator std::list<double>();
 
   /* friend operator overloads */
-  friend bool operator==(const EuclideanVector& a, const EuclideanVector& b);
-  friend bool operator!=(const EuclideanVector& a, const EuclideanVector& b); // NOTE: this is just inverse of above, re-use code 
-  friend EuclideanVector operator+(const EuclideanVector& a, const EuclideanVector& b);
-  friend EuclideanVector operator-(const EuclideanVector& a, const EuclideanVector& b);
-  friend double operator*(const EuclideanVector& a, const EuclideanVector& b);
-  friend EuclideanVector operator*(const EuclideanVector& ev, double scaler);
-  friend EuclideanVector operator/(const EuclideanVector& ev, double scaler);
-  friend std::ostream& operator<<(std::ostream& os, const EuclideanVector& ev);
+  friend bool operator==(const EuclideanVector& a, const EuclideanVector& b) 
+  {
+    if (&a == &b) return true;
+    if (a.dimensions_ != b.dimensions_) return false;
+    return std::equal(a.magnitudes_.get(), a.magnitudes_.get()+a.dimensions_, b.magnitudes_.get());
+  }
+  
+  friend bool operator!=(const EuclideanVector& a, const EuclideanVector& b)
+  {
+    return !(a == b);
+  }
+
+  friend EuclideanVector operator+(const EuclideanVector& a, const EuclideanVector& b)
+  {
+    if (a.dimensions_ != b.dimensions_) 
+    {
+        std::stringstream ss;
+        ss << "Dimensions of LHS(" << a.dimensions_ << ") and RHS(" << b.dimensions_ << ") do not match";
+        throw EuclideanVectorError(ss.str());
+    }
+    EuclideanVector new_ev {a.dimensions_};
+    std::transform(a.magnitudes_.get(), a.magnitudes_.get() + a.dimensions_, b.magnitudes_.get(), new_ev.magnitudes_.get(), std::plus<double>());
+    return new_ev;
+  }
+
+  friend EuclideanVector operator-(const EuclideanVector& a, const EuclideanVector& b)
+  {
+    if (a.dimensions_ != b.dimensions_) 
+    {
+        std::stringstream ss;
+        ss << "Dimensions of LHS(" << a.dimensions_ << ") and RHS(" << b.dimensions_ << ") do not match";
+        throw EuclideanVectorError(ss.str());
+    }
+    EuclideanVector new_ev {a.dimensions_};
+    std::transform(a.magnitudes_.get(), a.magnitudes_.get()+a.dimensions_, b.magnitudes_.get(), new_ev.magnitudes_.get(), std::minus<double>());
+    return new_ev;
+  }
+
+  friend double operator*(const EuclideanVector& a, const EuclideanVector& b)
+  {
+    if (a.dimensions_ != b.dimensions_) 
+    {
+        std::stringstream ss;
+        ss << "Dimensions of LHS(" << a.dimensions_ << ") and RHS(" << b.dimensions_ << ") do not match";
+        throw EuclideanVectorError(ss.str());
+    }
+    std::vector<double> sums {};
+    std::transform(a.magnitudes_.get(), a.magnitudes_.get()+a.dimensions_, b.magnitudes_.get(), sums.begin(), std::multiplies<double>());
+    return std::accumulate(sums.begin(), sums.end(), 0);
+  }
+
+  friend EuclideanVector operator*(const EuclideanVector& ev, double scaler)
+  {
+    EuclideanVector scaled_ev {ev.dimensions_};
+    std::transform(ev.magnitudes_.get(), ev.magnitudes_.get()+ev.dimensions_, scaled_ev.magnitudes_.get(), [scaler](double mag){return mag*=scaler;});
+    return scaled_ev;
+  }
+
+  friend EuclideanVector operator*(double scaler, const EuclideanVector& ev)
+  {
+    return (ev * scaler);
+  }
+
+  friend EuclideanVector operator/(const EuclideanVector& ev, double scaler)
+  {
+    if (scaler == 0.0) throw EuclideanVectorError("Invalid vector division by 0");
+    EuclideanVector scaled_ev {ev.dimensions_};
+    std::transform(ev.magnitudes_.get(), ev.magnitudes_.get()+ev.dimensions_, scaled_ev.magnitudes_.get(), [scaler](double mag){return mag/=scaler;});
+    return scaled_ev;
+  }
+
+  friend std::ostream& operator<<(std::ostream& os, const EuclideanVector& ev)
+  {
+    os << "[";
+    std::copy(ev.magnitudes_.get(), ev.magnitudes_.get()+ev.dimensions_, std::experimental::make_ostream_joiner(os, " "));
+    os << "]";
+    return os;
+  }
 
   /* methods */
   double at(int i) const;

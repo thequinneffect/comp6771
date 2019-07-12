@@ -300,6 +300,18 @@ SCENARIO("the move constructor should re-use the resoures of pre-existing EV's"
       }
     }
   }
+  GIVEN("a const ev") {
+    const EuclideanVector cev = {2, 7.0};
+    WHEN("we create a new ev via moving this const ev") {
+      EuclideanVector ev { std::move(cev) };
+      THEN("the new ev should have the resources of the old which is now 0 dimensional") {
+        REQUIRE(ev.GetNumDimensions() == 2);
+        REQUIRE(ev[0] == 7.0);
+        REQUIRE(ev[1] == 7.0);
+        REQUIRE(cev.GetNumDimensions() == 0);
+      }
+    }
+  }
 }
 
 /* dtor testing - this probably doesn't need to be done but oh well */
@@ -514,6 +526,19 @@ SCENARIO("the move assignment operator should move the contents of an existing"
         REQUIRE(ev1[0] == 5.0);
         REQUIRE(ev1[1] == 4.0);
         REQUIRE(ev1[2] == 3.0);
+        REQUIRE(ev2.GetNumDimensions() == 0);
+      }
+    }
+  }
+  GIVEN("a const and non-const ev") {
+    EuclideanVector ev1 = {2, 5.0};
+    const EuclideanVector ev2 = {2, 7.0};
+    WHEN("we move assign ev1 to ev2") {
+      ev1 = std::move(ev2);
+      THEN("ev1 should repurpose ev2's data and ev2 should have 0 dimensions") {
+        REQUIRE(ev1.GetNumDimensions() == 2);
+        REQUIRE(ev1[0] == 7.0);
+        REQUIRE(ev1[1] == 7.0);
         REQUIRE(ev2.GetNumDimensions() == 0);
       }
     }
