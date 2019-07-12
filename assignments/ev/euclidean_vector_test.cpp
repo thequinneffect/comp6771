@@ -910,76 +910,162 @@ SCENARIO("operator std::list<double>") {
   }
 }
 
-SCENARIO("friend operator ==") {
+/* allowing testing both of these at once as != calls == */
+SCENARIO("friend operator == and !=") {
 
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
-      }
+  GIVEN("one vector") {
+    EuclideanVector ev {1};
+    WHEN("we compare equal to itself") {
+      REQUIRE(ev == ev);
+      REQUIRE_FALSE(ev != ev);
     }
   }
-}
-
-SCENARIO("friend operator !=") {
-
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
-      }
+  GIVEN("two vectors of same dimension but different magnitudes") {
+    EuclideanVector a {1, 1.0};
+    EuclideanVector b {1, 2.0};
+    WHEN("we compare them equal") {
+      REQUIRE_FALSE(a == b);
+      REQUIRE(a != b);
+    }
+  }
+  GIVEN("two vectors of same dimension and same magnitudes") {
+    EuclideanVector a {2, 3.0};
+    EuclideanVector b {2, 3.0};
+    a[1] = 4.0;
+    b[1] = 4.0;
+    WHEN("we compare them equal") {
+      REQUIRE(a == b);
+      REQUIRE_FALSE(a != b);
+    }
+  }
+  GIVEN("two vectors of 0 dimension") {
+    EuclideanVector a {0};
+    EuclideanVector b {0};
+    WHEN("we compare them equal") {
+      REQUIRE(a == b);
+      REQUIRE_FALSE(a != b);
     }
   }
 }
 
 SCENARIO("friend operator +") {
 
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
+  GIVEN("two ev's of different dimensions") {
+    EuclideanVector a {1, 1.0};
+    EuclideanVector b {2, 2.0};
+    WHEN("we try to add these") {
+      REQUIRE_THROWS_WITH(a + b, "Dimensions of LHS(1) and RHS(2) do not match");
+    }
+  }
+  GIVEN("two ev's of the same dimensions") {
+    EuclideanVector a {2, 1.0};
+    EuclideanVector b {2, 2.0};
+    b[1] = 3.0;
+    WHEN("we add these together and store in another ev") {
+      EuclideanVector c = a + b;
+      THEN("a and b should be unmodified, c should contain a + b mags") {
+        REQUIRE(a.GetNumDimensions() == 2);
+        REQUIRE(a[0] == 1.0);
+        REQUIRE(a[1] == 1.0);
+        REQUIRE(b.GetNumDimensions() == 2);
+        REQUIRE(b[0] == 2.0);
+        REQUIRE(b[1] == 3.0);
+        REQUIRE(c.GetNumDimensions() == 2);
+        REQUIRE(c[0] == 3.0);
+        REQUIRE(c[1] == 4.0);
       }
+    }
+  }
+  GIVEN("two vectors of 0 dimension") {
+    EuclideanVector a {0};
+    EuclideanVector b {0};
+    WHEN("we add them") {
+      EuclideanVector c = a + b;
+      REQUIRE(c.GetNumDimensions() == 0);
     }
   }
 }
 
 SCENARIO("friend operator -") {
 
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
+  GIVEN("two ev's of different dimensions") {
+    EuclideanVector a {1, 1.0};
+    EuclideanVector b {2, 2.0};
+    WHEN("we try to subtract these") {
+      REQUIRE_THROWS_WITH(a - b, "Dimensions of LHS(1) and RHS(2) do not match");
+    }
+  }
+  GIVEN("two ev's of the same dimensions") {
+    EuclideanVector a {2, 6.0};
+    EuclideanVector b {2, 2.0};
+    b[1] = 3.0;
+    WHEN("we subtract b from a and store result in another ev") {
+      EuclideanVector c = a - b;
+      THEN("a and b should be unmodified, c should contain a - b mags") {
+        REQUIRE(a.GetNumDimensions() == 2);
+        REQUIRE(a[0] == 6.0);
+        REQUIRE(a[1] == 6.0);
+        REQUIRE(b.GetNumDimensions() == 2);
+        REQUIRE(b[0] == 2.0);
+        REQUIRE(b[1] == 3.0);
+        REQUIRE(c.GetNumDimensions() == 2);
+        REQUIRE(c[0] == 4.0);
+        REQUIRE(c[1] == 3.0);
       }
+    }
+  }
+  GIVEN("two vectors of 0 dimension") {
+    EuclideanVector a {0};
+    EuclideanVector b {0};
+    WHEN("we subtract them") {
+      EuclideanVector c = a - b;
+      REQUIRE(c.GetNumDimensions() == 0);
     }
   }
 }
 
 SCENARIO("friend operator ev * ev") {
 
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
+  GIVEN("two ev's of different dimensions") {
+    EuclideanVector a {1, 1.0};
+    EuclideanVector b {2, 2.0};
+    WHEN("we try to multiply these") {
+      REQUIRE_THROWS_WITH(a * b, "Dimensions of LHS(1) and RHS(2) do not match");
+    }
+  }
+  GIVEN("two ev's of the same dimensions") {
+    EuclideanVector a {2, 1.0};
+    EuclideanVector b {2, 3.0};
+    a[1] = 2.0;
+    b[1] = 4.0;
+    WHEN("we multiply (dot product) a and b and store in a variable") {
+      double dot_prod = a * b;
+      THEN("a and b should be unmodified, dot product should be sum of pair products") {
+        REQUIRE(a.GetNumDimensions() == 2);
+        REQUIRE(a[0] == 1.0);
+        REQUIRE(a[1] == 2.0);
+        REQUIRE(b.GetNumDimensions() == 2);
+        REQUIRE(b[0] == 3.0);
+        REQUIRE(b[1] == 4.0);
+        REQUIRE(dot_prod == 11);
       }
+    }
+  }
+  GIVEN("two vectors of 0 dimension") {
+    EuclideanVector a {0};
+    EuclideanVector b {0};
+    WHEN("we dot product them") {
+      double dot_prod = a * b;
+      REQUIRE(dot_prod == 0);
     }
   }
 }
 
 SCENARIO("friend operator scaler * ev") {
 
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
+  GIVEN("a vector with 0 mags") {
+    EuclideanVector ev {2, 0.0};
+    WHEN("we mult") {
 
       THEN("this should happed") {
         REQUIRE(1);

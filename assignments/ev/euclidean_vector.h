@@ -91,8 +91,9 @@ class EuclideanVector {
         ss << "Dimensions of LHS(" << a.dimensions_ << ") and RHS(" << b.dimensions_ << ") do not match";
         throw EuclideanVectorError(ss.str());
     }
-    std::vector<double> sums {};
-    std::transform(a.magnitudes_.get(), a.magnitudes_.get()+a.dimensions_, b.magnitudes_.get(), sums.begin(), std::multiplies<double>());
+    std::vector<double> sums;
+    sums.reserve(a.dimensions_);
+    std::transform(a.magnitudes_.get(), a.magnitudes_.get()+a.dimensions_, b.magnitudes_.get(), std::back_inserter(sums), std::multiplies<double>());
     return std::accumulate(sums.begin(), sums.end(), 0);
   }
 
