@@ -94,7 +94,7 @@ class EuclideanVector {
     std::vector<double> sums;
     sums.reserve(a.dimensions_);
     std::transform(a.magnitudes_.get(), a.magnitudes_.get()+a.dimensions_, b.magnitudes_.get(), std::back_inserter(sums), std::multiplies<double>());
-    return std::accumulate(sums.begin(), sums.end(), 0);
+    return std::accumulate(sums.begin(), sums.end(), 0.0);
   }
 
   friend EuclideanVector operator*(const EuclideanVector& ev, double scaler)
@@ -130,7 +130,7 @@ class EuclideanVector {
   double& at(int i);
   int GetNumDimensions() const;
   double GetEuclideanNorm() const;
-  EuclideanVector CreateUnitVector();
+  EuclideanVector CreateUnitVector() const;
   
   // TODO(you): add more
  

@@ -161,14 +161,14 @@ double EuclideanVector::GetEuclideanNorm() const
         throw EuclideanVectorError("EuclideanVector with no dimensions does not have a norm");
     std::vector<double> squares;
     squares.reserve(dimensions_);
-    std::transform(magnitudes_.get(), magnitudes_.get()+dimensions_, squares.begin(), [](double mag){return mag*mag;});
-    return std::sqrt(std::accumulate(squares.begin(), squares.end(), 0));
+    std::transform(magnitudes_.get(), magnitudes_.get()+dimensions_, std::back_inserter(squares), [](double mag){return mag*mag;});
+    return std::sqrt(std::accumulate(squares.begin(), squares.end(), 0.0));
 }
 
-EuclideanVector EuclideanVector::CreateUnitVector()
+EuclideanVector EuclideanVector::CreateUnitVector() const
 {
     if (dimensions_ == 0)
-        throw EuclideanVectorError("EuclideanVector with no dimensions does not have a norm");
+        throw EuclideanVectorError("EuclideanVector with no dimensions does not have a unit vector");
     double norm = this->GetEuclideanNorm();
     if (norm == 0) 
         throw EuclideanVectorError("EuclideanVector with euclidean normal of 0 does not have a unit vector");

@@ -6,6 +6,11 @@
    to which you're certain you have covered all possibilities,
    and why you think your tests are that thorough.
 
+  - i definitely learnt as I went along which types of tests are more valuable. I don't really want
+  to have to clean up all the tests are the start because of how long this file is 
+  (and they are all still valid tests, some just probably aren't "necessary") and so i'd suggest 
+  looking at test from friend operators onwards (in terms of marking testing style).
+
   - a lot of these tests are probably considered superfluous or a bit over the top and cautious,
   the reason/justification I give for them is that i'm simply not comfortable with all the 
   different ways things like construction, copying and moving can be performed (both in terms 
@@ -24,6 +29,8 @@
   - justification : for testing copy assignment operator= overload, I do not explicitly test that
   the argument EV "const EuclideanVector& original" (i.e. the one being copied from) is unchanged
   as the const keyword should enforce this to be the case.  
+
+
 
 */
 
@@ -83,7 +90,7 @@ SCENARIO("the {dimension, magnitude} constructor should validly construct EV's")
       EuclideanVector ev {100, 200.0};
       THEN("we should have a 100 dimension vector with 200.0 magnitudes for all dimensions") {
         REQUIRE(ev.GetNumDimensions() == 100);
-        for (int i=0; i < ev.GetNumDimensions(); ++i) REQUIRE(ev[i] == 200.0); // ASK TUTOR: is this good or bad?
+        for (int i=0; i < ev.GetNumDimensions(); ++i) REQUIRE(ev[i] == 200.0);
       }
     }
   }
@@ -315,11 +322,11 @@ SCENARIO("the move constructor should re-use the resoures of pre-existing EV's"
     const EuclideanVector cev = {2, 7.0};
     WHEN("we create a new ev via moving this const ev") {
       EuclideanVector ev { std::move(cev) };
-      THEN("the new ev should have the resources of the old which is now 0 dimensional") {
+      THEN("the new ev should be created by copy instead") {
         REQUIRE(ev.GetNumDimensions() == 2);
         REQUIRE(ev[0] == 7.0);
         REQUIRE(ev[1] == 7.0);
-        REQUIRE(cev.GetNumDimensions() == 0);
+        REQUIRE(cev.GetNumDimensions() == 2);
       }
     }
   }
@@ -546,11 +553,11 @@ SCENARIO("the move assignment operator should move the contents of an existing"
     const EuclideanVector ev2 = {2, 7.0};
     WHEN("we move assign ev1 to ev2") {
       ev1 = std::move(ev2);
-      THEN("ev1 should repurpose ev2's data and ev2 should have 0 dimensions") {
+      THEN("ev1 should be copy assigned from ev2 because it is const") {
         REQUIRE(ev1.GetNumDimensions() == 2);
         REQUIRE(ev1[0] == 7.0);
         REQUIRE(ev1[1] == 7.0);
-        REQUIRE(ev2.GetNumDimensions() == 0);
+        REQUIRE(ev2.GetNumDimensions() == 2);
       }
     }
   }
@@ -1061,27 +1068,61 @@ SCENARIO("friend operator ev * ev") {
   }
 }
 
-SCENARIO("friend operator scaler * ev") {
+/* again, testing these in tandem because one calls the other */
+SCENARIO("friend operator scaler * ev && ev * scaler") {
 
   GIVEN("a vector with 0 mags") {
     EuclideanVector ev {2, 0.0};
-    WHEN("we mult") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
+    WHEN("we multiply this ev by a scaler") {
+      EuclideanVector a = ev * 2;
+      EuclideanVector b = 2 * ev;
+      THEN("we should still have 0 mags") {
+        REQUIRE(ev[0] == 0.0);
+        REQUIRE(ev[1] == 0.0);
+        REQUIRE(a[0] == 0.0);
+        REQUIRE(a[1] == 0.0);
+        REQUIRE(b[0] == 0.0);
+        REQUIRE(b[1] == 0.0);
       }
     }
   }
-}
-
-SCENARIO("friend operator ev * scaler") {
-
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
+  GIVEN("a EV with non-zero magnitudes") {
+    EuclideanVector ev {2, 3.0};
+    ev[1] = 5.0;
+    WHEN("we multiply by any positive scaler") {
+      EuclideanVector a = ev * 2;
+      EuclideanVector b = 2 * ev;
+      THEN("each magnitude should be scaled by that scaler") {
+        REQUIRE(a.GetNumDimensions() == 2);
+        REQUIRE(a[0] == 6.0);
+        REQUIRE(a[1] == 10.0);
+        REQUIRE(b.GetNumDimensions() == 2);
+        REQUIRE(b[0] == 6.0);
+        REQUIRE(b[1] == 10.0);
+      }
+    }
+    AND_WHEN("we multiply by any negative scaler") {
+      EuclideanVector a = ev * -2;
+      EuclideanVector b = -2 * ev;
+      THEN("each magnitude should be scaled by that scaler") {
+        REQUIRE(a.GetNumDimensions() == 2);
+        REQUIRE(a[0] == -6.0);
+        REQUIRE(a[1] == -10.0);
+        REQUIRE(b.GetNumDimensions() == 2);
+        REQUIRE(b[0] == -6.0);
+        REQUIRE(b[1] == -10.0);
+      }
+    }
+    AND_WHEN("we multiply by a zero scaler") {
+      EuclideanVector a = ev * 0;
+      EuclideanVector b = 0 * ev;
+      THEN("each magnitude should be scaled by that scaler") {
+        REQUIRE(a.GetNumDimensions() == 2);
+        REQUIRE(a[0] == 0);
+        REQUIRE(a[1] == 0);
+        REQUIRE(b.GetNumDimensions() == 2);
+        REQUIRE(b[0] == 0);
+        REQUIRE(b[1] == 0);
       }
     }
   }
@@ -1089,12 +1130,39 @@ SCENARIO("friend operator ev * scaler") {
 
 SCENARIO("friend operator ev / scaler") {
 
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
+  GIVEN("any EV") {
+    EuclideanVector a {2, 2.0};
+    WHEN("we try to divide by 0") {
+      REQUIRE_THROWS_WITH(a / 0, "Invalid vector division by 0");
+    }
+  }
+  GIVEN("a vector with 0 mags") {
+    EuclideanVector ev {2, 0.0};
+    WHEN("we divide this ev by a scaler") {
+      EuclideanVector a = ev / 2;
+      THEN("we should still have 0 mags") {
+        REQUIRE(a[0] == 0.0);
+        REQUIRE(a[1] == 0.0);
+      }
+    }
+  }
+  GIVEN("a EV with non-zero magnitudes") {
+    EuclideanVector ev {2, 4.0};
+    ev[1] = 6.0;
+    WHEN("we divide by any positive scaler") {
+      EuclideanVector a = ev / 2;
+      THEN("each magnitude should be divided by that scaler") {
+        REQUIRE(a.GetNumDimensions() == 2);
+        REQUIRE(a[0] == 2.0);
+        REQUIRE(a[1] == 3.0);
+      }
+    }
+    AND_WHEN("we multiply by any negative scaler") {
+      EuclideanVector a = ev / -2;
+      THEN("each magnitude should be divided by that scaler") {
+        REQUIRE(a.GetNumDimensions() == 2);
+        REQUIRE(a[0] == -2.0);
+        REQUIRE(a[1] == -3.0);
       }
     }
   }
@@ -1102,38 +1170,159 @@ SCENARIO("friend operator ev / scaler") {
 
 SCENARIO("friend operator <<") {
 
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
-      }
+  GIVEN("a 0 dimension vector") {
+    EuclideanVector ev {0};
+    std::stringstream ss;
+    WHEN("we print it") {
+      ss << ev;
+      REQUIRE(ss.str() == "[]");
+    }
+  }
+  GIVEN("a 1 dimension vector") {
+    EuclideanVector ev {1, 1.0};
+    std::stringstream ss;
+    WHEN("we print it") {
+      ss << ev;
+      REQUIRE(ss.str() == "[1]");
+    }
+  }
+  GIVEN("a 2 dimension vector") {
+    EuclideanVector ev {2, 2.0};
+    ev[0] = 1;
+    std::stringstream ss;
+    WHEN("we print it") {
+      ss << ev;
+      REQUIRE(ss.str() == "[1 2]");
+    }
+  }
+  GIVEN("a 3 dimension vector") {
+    EuclideanVector ev {3, 3.0};
+    std::stringstream ss;
+    ev[1] = 1;
+    ev[2] = 2;
+    WHEN("we print it") {
+      ss << ev;
+      REQUIRE(ss.str() == "[3 1 2]");
+    }
+  }
+  GIVEN("a vec with neg magnitude") {
+    EuclideanVector ev {3, -3.0};
+    std::stringstream ss;
+    ev[1] = -1;
+    ev[2] = 2;
+    WHEN("we print it") {
+      ss << ev;
+      REQUIRE(ss.str() == "[-3 -1 2]");
     }
   }
 }
 
 SCENARIO("method at()") {
 
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
+  GIVEN("both const and non-const 0-d vectors and a non-0d vectors") {
+    EuclideanVector a {0};
+    EuclideanVector b {2, 2.0};
+    const EuclideanVector ca {0};
+    const EuclideanVector cb {2, 2.0};
+    WHEN("we try to access either out of bounds") {
+      REQUIRE_THROWS_WITH(a.at(0), "Index 0 is not valid for this EuclideanVector object");
+      REQUIRE_THROWS_WITH(b.at(2), "Index 2 is not valid for this EuclideanVector object");
+      REQUIRE_THROWS_WITH(ca.at(0), "Index 0 is not valid for this EuclideanVector object");
+      REQUIRE_THROWS_WITH(cb.at(2), "Index 2 is not valid for this EuclideanVector object");
+    }
+  }
+  GIVEN("a non-const ev") {
+    EuclideanVector a {2, 2.0};
+    a[1] = 4.0;
+    WHEN("we get from it") {
+      double& dr0 = a.at(0);
+      double& dr1 = a.at(1);
+      THEN("we should be return references to the actual mags")
+        REQUIRE(&dr0 == &(a.at(0)));
+        REQUIRE(&dr1 == &(a.at(1)));
+    }
+    AND_WHEN("we set via these references, both directly and via a variable") {
+      double& dr0 = a.at(0);
+      dr0 = 6.0;
+      a.at(1) = 9.0;
+      THEN("the vector itself should be changed") {
+        REQUIRE(a[0] == 6.0);
+        REQUIRE(a[1] == 9.0);
+      }
+    }
+  }
+  GIVEN("a const ev") {
+    const EuclideanVector a {2, 2.0};
+    WHEN("we get from it") {
+      double d = a.at(0);
+      THEN("we should get the correct value") {
+        REQUIRE(d == 2.0);
+      }
+    }
+    AND_WHEN("we change a value we have gotten (try set)") {
+      double d = a.at(0);
+      d = 6.0;
+      THEN("the value should change in the variable but not in the ev") {
+        REQUIRE(d == 6.0);
+        REQUIRE(a[0] == 2.0);
       }
     }
   }
 }
 
+/* taking the liberty to not test GetNumDimensions as other tests implicitly use and
+hence test it (and it is a trivial function - a one line getter) */
+
 SCENARIO("method GetEuclideanNorm()") {
 
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
+  GIVEN("a 0-dimensional ev") {
+    EuclideanVector ev {0};
+    WHEN("we try get its normal") {
+      REQUIRE_THROWS_WITH(ev.GetEuclideanNorm(), "EuclideanVector with no dimensions does not have a norm");
+    }
+  }
+  GIVEN("a vec with 0-mags") {
+    EuclideanVector ev {3, 0.0};
+    WHEN("we get it's normal") {
+      double norm = ev.GetEuclideanNorm();
+      THEN("it should be 0") {
+        REQUIRE(norm == 0);
+      }
+    }
+  }
+  GIVEN("a vec with 1.0 mags") {
+    EuclideanVector ev {4, 1.0};
+    WHEN("we get it's normal") {
+      double norm = ev.GetEuclideanNorm();
+      THEN("it should be the square root of the sum of mag squares") {
+        REQUIRE(norm == 2);
+      }
+    }
+  }
+  GIVEN("a vec with non-zero positive mags") {
+    EuclideanVector ev {4, 3.0};
+    WHEN("we get it's normal") {
+      double norm = ev.GetEuclideanNorm();
+      THEN("it should be the square root of the sum of mag squares") {
+        REQUIRE(norm == 6);
+      }
+    }
+  }
+  GIVEN("a vec with non-zero negative mags") {
+    EuclideanVector ev {4, -3.0};
+    WHEN("we get it's normal") {
+      double norm = ev.GetEuclideanNorm();
+      THEN("it should be the square root of the sum of mag squares") {
+        REQUIRE(norm == 6);
+      }
+    }
+  }
+  GIVEN("a const ev") {
+    const EuclideanVector ev {4, 3.0};
+    WHEN("we get it's normal") {
+      double norm = ev.GetEuclideanNorm();
+      THEN("it should be the square root of the sum of mag squares") {
+        REQUIRE(norm == 6);
       }
     }
   }
@@ -1141,12 +1330,48 @@ SCENARIO("method GetEuclideanNorm()") {
 
 SCENARIO("method CreateUnitVector") {
 
-  GIVEN("some setup") {
-
-    WHEN("we do something on this setup") {
-
-      THEN("this should happed") {
-        REQUIRE(1);
+  GIVEN("a 0-dimensional ev") {
+    EuclideanVector ev {0};
+    WHEN("we try create its unit vector") {
+      REQUIRE_THROWS_WITH(ev.CreateUnitVector(), "EuclideanVector with no dimensions does not have a unit vector");
+    }
+  }
+  GIVEN("a non-0-dimensional ev with a normal of 0") {
+    EuclideanVector ev {3, 0.0};
+    REQUIRE(ev.GetEuclideanNorm() == 0);
+    WHEN("we try create its unit vector") {
+      REQUIRE_THROWS_WITH(ev.CreateUnitVector(), "EuclideanVector with euclidean normal of 0 does not have a unit vector");
+    }
+  }
+  GIVEN("a non-0-dimensional ev with a non-zero normal") {
+    EuclideanVector ev {4, 2.0};
+    REQUIRE(ev.GetEuclideanNorm() == 4);
+    WHEN("we create its unit vector") {
+      EuclideanVector unit_vec = ev.CreateUnitVector();
+      THEN("the original vector should be unchanged and unit vec values correct") {
+        REQUIRE(ev.GetNumDimensions() == 4);
+        REQUIRE(ev[0] == 2);
+        REQUIRE(ev[1] == 2);
+        REQUIRE(ev[2] == 2);
+        REQUIRE(ev[3] == 2); 
+        REQUIRE(unit_vec.GetNumDimensions() == 4);
+        REQUIRE(unit_vec[0] == 0.5);
+        REQUIRE(unit_vec[1] == 0.5);
+        REQUIRE(unit_vec[2] == 0.5);
+        REQUIRE(unit_vec[3] == 0.5); 
+      }
+    }
+  }
+  GIVEN("a const ev with non-zero normal") {
+    std::vector<double> vec {6, 4, -2, -8, 1};
+    const EuclideanVector ev {vec.begin(), vec.end()};
+    WHEN("we calculate the unit vec") {
+      EuclideanVector unit_vec = ev.CreateUnitVector();
+      THEN("it should be the same size as ev and ev unchanged") {
+        REQUIRE(unit_vec.GetNumDimensions() == 5);
+        // because const if this runs we know it isn't changed
+        // can't explicitly compare == the unit vec values because of precision diffs
+        unit_vec[0] = 1.0; // test that unit vec can be non-const
       }
     }
   }
