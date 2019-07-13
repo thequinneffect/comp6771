@@ -57,6 +57,7 @@
   would be that I need to cut down tests that "probably" aren't testing a new "case" but instead
   just a modified version of an existing case
 
+  0xff
 */
 
 #include "assignments/ev/euclidean_vector.h"
