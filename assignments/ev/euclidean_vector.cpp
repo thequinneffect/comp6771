@@ -3,6 +3,7 @@
 #include <algorithm>  // these are helpful https://en.cppreference.com/w/cpp/algorithm
 #include <cassert>
 #include <cmath>
+#include <functional>
 #include <iterator>
 #include <list>
 #include <memory>
@@ -53,13 +54,11 @@ EuclideanVector& EuclideanVector::operator=(EuclideanVector&& recyclee) noexcept
   return *this;
 }
 
-double& EuclideanVector::operator[](int i)  // setter
-{
+double& EuclideanVector::operator[](int i) {
   assert(i >= 0 && i < dimensions_);
   return magnitudes_.get()[i];
 }
-double EuclideanVector::operator[](int i) const  // getter
-{
+double EuclideanVector::operator[](int i) const {
   assert(i >= 0 && i < dimensions_);
   return magnitudes_.get()[i];
 }
@@ -116,8 +115,7 @@ EuclideanVector::operator std::list<double>() const {
 }
 
 /* methods */
-double EuclideanVector::at(int i) const  // setter
-{
+double EuclideanVector::at(int i) const {
   if (i < 0 || i >= dimensions_) {
     std::stringstream ss;
     ss << "Index " << i << " is not valid for this EuclideanVector object";
@@ -126,8 +124,7 @@ double EuclideanVector::at(int i) const  // setter
   return magnitudes_.get()[i];
 }
 
-double& EuclideanVector::at(int i)  // getter
-{
+double& EuclideanVector::at(int i) {
   if (i < 0 || i >= dimensions_) {
     std::stringstream ss;
     ss << "Index " << i << " is not valid for this EuclideanVector object";
