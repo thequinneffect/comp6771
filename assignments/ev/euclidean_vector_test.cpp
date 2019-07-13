@@ -359,8 +359,7 @@ SCENARIO("the default destructor should validly destruct all types of EV's") {
 
 /* testing operator overloads */
 
-SCENARIO("the copy assignment operator should copy the contents of an existing"
-          " argument EV into an existing caller EV") {
+SCENARIO("the copy assignment operator =") {
 
   GIVEN("two existing EV's of the same dimensions and same uniform magnitudes") {
     EuclideanVector ev1 = {2, 5.0};
@@ -877,6 +876,16 @@ SCENARIO("operator std::vector<double>") {
       }
     }
   }
+  GIVEN("a 1d ev") {
+    EuclideanVector ev {1, 2.0};
+    WHEN("we cast this ev to a const vector type") {
+      const std::vector<double> vec = static_cast<std::vector<double>>(ev);
+      THEN("this vec should contain one element of magnitude 2") {
+        REQUIRE(vec.size() == 1);
+        REQUIRE(vec.at(0) == 2.0);
+      }
+    }
+  }
 }
 
 SCENARIO("operator std::list<double>") {
@@ -912,6 +921,16 @@ SCENARIO("operator std::list<double>") {
         REQUIRE(*it++ == 1.0);
         REQUIRE(*it++  == 3.0);
         REQUIRE(*it == 2.0);
+      }
+    }
+  }
+  GIVEN("a 1d ev") {
+    EuclideanVector ev {1, 2.0};
+    WHEN("we cast this ev to a const list type") {
+      const std::list<double> list = static_cast<std::list<double>>(ev);
+      THEN("this list should contain one element of magnitude 2") {
+        REQUIRE(list.size() == 1);
+        REQUIRE(list.front() == 2.0);
       }
     }
   }

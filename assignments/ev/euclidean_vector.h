@@ -24,13 +24,13 @@ class EuclideanVector {
  public:
   /* ctors */
   explicit EuclideanVector(int dimensions = 1); // default dimension 1 ctor (i dimensions, all magnitudes 0)
-  EuclideanVector(int dimensions, double magnitudes); // i dimensions, all magnitudes double
+  EuclideanVector(int dimensions, double magnitude); // i dimensions, all magnitudes double
   EuclideanVector(std::vector<double>::const_iterator begin, std::vector<double>::const_iterator end); // iterate over vector
   EuclideanVector(const EuclideanVector& original); // copy construct
   EuclideanVector(EuclideanVector&& recyclee) noexcept; // move construct ((1) noexcept as a failed move does not guarantee valid state)
 
   /* dtor */
-  ~EuclideanVector() noexcept = default; // TODO: is this correct?
+  ~EuclideanVector() noexcept = default;
 
   /* operator overloads */
   EuclideanVector& operator=(const EuclideanVector& original); // copy assign
@@ -41,11 +41,11 @@ class EuclideanVector {
   EuclideanVector& operator-=(const EuclideanVector& other);
   EuclideanVector& operator*=(const double scaler);
   EuclideanVector& operator/=(const double scaler);
-  explicit operator std::vector<double>();
-  explicit operator std::list<double>();
+  explicit operator std::vector<double>() const;
+  explicit operator std::list<double>() const;
 
   /* friend operator overloads */
-  friend bool operator==(const EuclideanVector& a, const EuclideanVector& b) 
+  friend bool operator==(const EuclideanVector& a, const EuclideanVector& b)
   {
     if (&a == &b) return true;
     if (a.dimensions_ != b.dimensions_) return false;
