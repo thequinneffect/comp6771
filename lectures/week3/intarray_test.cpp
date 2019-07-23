@@ -29,14 +29,14 @@ SCENARIO() {
     IntArray array{2};
     array.At(1) = 1;
 
-//    WHEN("You attempt to make a const reference to the array") {
-//      const auto& cref{array};
-//
-//      THEN("You can successfully index using the const reference") {
-//        REQUIRE(cref.At(0) == 0);
-//        REQUIRE(cref.At(1) == 1);
-//      }
-//    }
+    WHEN("You attempt to make a const reference to the array") {
+      const auto& cref{array};
+
+      THEN("You can successfully index using the const reference") {
+        REQUIRE(cref.At(0) == 0);
+        REQUIRE(cref.At(1) == 1);
+      }
+    }
 
     WHEN("You copy-construct the array") {
       auto copy{array};
