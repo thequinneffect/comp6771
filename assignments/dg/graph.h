@@ -20,7 +20,7 @@ class Graph {
      * the resource. I chose to solely store observer_ptrs to Edge
      * objects rather than other Nodes because an Edge has to store
      * the src->dst relationship anyway. */
-    struct Node {
+    class Node {
         std::vector<std::observer_ptr<Edge>> incoming_; // 0..*
         std::vector<std::observer_ptr<Edge>> outgoing_; // 0..*
         N value_; // exactly 1
@@ -33,10 +33,10 @@ class Graph {
      * resources are already owned by unique_ptr's, I just use 
      * observer_ptrs as references (they can re-point when the 
      * underlying heap memory moves, refs cannot) */
-    struct Edge {
+    class Edge {
         std::observer_ptr<Node> src_; // exactly 1
         std::observer_ptr<Node> dst_; // exactly 1
-        E value_; // exactly 1
+        E weight_; // exactly 1
     };
 
     /* owns all nodes */
