@@ -4,60 +4,79 @@
 #include <experimental/memory>
 #include <map>
 #include <memory>
-#include <unordered_set>
+#include <set>
+#include <tuple>
 #include <unordered_map>
 
 namespace gdwg {
 
-template <typename N, typename E> // could be for example "string, int", "int, double", "string, string" etc.
+template <typename N, typename E>
 class Graph {
+
   public:
     class const_iterator {};
 
+    /*  */
+    struct Edge;
+    struct Node {
+
+      struct NodeComp {
+        using is_transparent = void;
+        bool operator()(const std::unique_ptr<Graph::Node>& a, const std::unique_ptr<Graph::Node>& b) const {
+          return (*a).value_ < (*b).value_;
+        }
+        bool operator()(const std::unique_ptr<Graph::Node>& a, const N& value) const {
+          return (*a).value_ < value;
+        }
+        bool operator()(const N& value, const std::unique_ptr<Graph::Node>& b) const {
+          return value < (*b).value_;
+        }
+      };
+
+      Node(N val) : value_{val} {};
+      /* the set of 0..* incoming edges */
+      std::set<std::weak_ptr<Edge>> incoming_;
+      /* the set of 0..* outgoing edges */
+      std::set<std::weak_ptr<Edge>> outgoing_;
+      N value_;
+    };
+
+    /* */
+    struct Edge { 
+      
+      struct EdgeComp {
+        using is_transparent = void;
+        bool operator()(const std::shared_ptr<Graph::Edge>& a, const std::shared_ptr<Graph::Edge>& b) const {
+          return (*a).weight_ < (*b).weight_;
+        }
+        bool operator()(const std::shared_ptr<Graph::Edge>& a, const E& value) const {
+          return (*a).weight_ < value;
+        }
+        bool operator()(const E& value, const std::shared_ptr<Graph::Edge>& b) const {
+          return value < (*b).weight_;
+        }
+      };
+
+      Node* src_; // exactly 1
+      Node* dst_; // exactly 1
+      E weight_;
+    };
+    
+    Graph()=default;
+    Graph(
+      typename std::vector<N>::const_iterator b,
+      typename std::vector<N>::const_iterator e
+    );
+
+    /* methods */
+    bool InsertNode(const N& val);
+
   private:
 
-    /* represents a node graphically. As nodes are unique, I store
-     * the resource on this Node object (which is owned by a 
-     * unique_ptr). This is so that when the node is deleted, so is
-     * the resource. I chose to solely store observer_ptrs to Edge
-     * objects rather than other Nodes because an Edge has to store
-     * the src->dst relationship anyway. */
-    struct Node {
-        /* i've chosen sets rather than vectors so that removal is
-         * nicer in that we don't have wasted slots */
-        std::unordered_set<std::weak_ptr<Edge>> incoming_; // 0..*
-        std::unordered_set<std::weak_ptr<Edge>> outgoing_; // 0..*
-        N value_; // exactly 1
-    };
-
-    /* represents an edge graphically. As edges are also unique, I
-     * store the resource for the edge on this Edge object which is
-     * owned by a unique_ptr (for same reasons as above). Each edge
-     * also has exactly one src Node and dst Node, and because these
-     * resources are already owned by unique_ptr's, I just use 
-     * observer_ptrs */
-    struct Edge {
-        std::experimental::observer_ptr<Node> src_; // exactly 1
-        std::experimental::observer_ptr<Node> dst_; // exactly 1
-        E weight_; // exactly 1
-    };
-
     /* owns all nodes */
-    /* By storing the nodes in a map which is indexed by the node
-     * value N, we can look-up whether or not a node exists in
-     * the graph in amortised constant time. 
-     * - ordered so that GetNodes is easy */
-    std::map<N, std::unique_ptr<Node>> nodes_;
-    //std::vector<std::unique_ptr<Node>> nodes_;
+    std::set<std::unique_ptr<Node>, typename Node::NodeComp> nodes_;
     /* owns all edges */
-    /* - Map of N to Edge so that InsertEdge is easy
-     * By storing the edges in a map which is indexed by the source
-     * node, we only need to check whether or not the source node
-     * exists or not (amortised constant look-up), and then check 
-     * it's edges if it does (linear in number of outgoing edges) */
-    std::unordered_map<N, std::shared_ptr<Edge>> edges_;
-    //std::vector<std::unique_ptr<Edge>> edges_;
-    
+    std::set<std::shared_ptr<Edge>, typename Edge::EdgeComp> edges_;
 };
 
 }  // namespace gdwg
@@ -65,3 +84,37 @@ class Graph {
 #include "assignments/dg/graph.tpp"
 
 #endif  // ASSIGNMENTS_DG_GRAPH_H_
+
+/*
+
+  01. InsertNode : requires fast look-up of whether or not Node(val) exists or not [/]
+    - std::map<N, std::unique_ptr<Node>> nodes_;
+  02. InsertEdge : requires fast look-up of whether Edge(N1,N2,W) exists or not
+    - map<tuple<N,N,E>, E> edges_; 
+  03. DeleteNode : requires fast look-up of target node (see 1), then for each edge
+  on that node it requires fast look-up of the edge (see 2)
+    - note: the node itself cannot own all its edges (because it has incoming and
+    outgoing edges so that would lead to dual ownership, so a third party structure
+    own them)
+    - loop through incoming_ and outgoing_, these provide you with a {src, dst, w} to
+    look up edges_ with and delete it if it exists. Then just delete the node.
+  04. Replace : see 1
+  05. MergeReplace : need a fast way of finding edges between src and dst
+    - map<N, set<E>> incoming/outgoing; this allows us to seach src outgoing with dst
+    as key, and src incoming with dst as key
+  06. Clear : just empty the owning containers nodes_ and edges_. Everything is then
+  destructed and gone.
+  07. IsNode : see 1
+  08. IsConnected : see 2
+  09. GetNodes : nodes_ is implicitly ordered as it's a map
+  10. GetConnected :returns a sorted (increasing order) vector of nodes connected
+  to the src node from outgoing edges
+    - map<N, set<E>> outgoing_; i.e. can loop through and grab keys (N) of this map
+    and these are the nodes. They are also implicitly ordered
+  11. GetWeights : returns a sorted (increasing order) vector of weights from src -> dst
+    - map<N, set<E>> outgoing_; i.e. access src node, instantiate vector from src nodes 
+    outgoing set for dest node N
+  12. find :
+  13. erase :
+
+ */

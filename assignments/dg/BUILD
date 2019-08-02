@@ -20,3 +20,11 @@ cc_test(
         "//:catch",
     ],
 )
+
+cc_binary(
+    name = "my_client",
+    srcs = ["my_client.cpp"],
+    deps = [
+        ":graph",
+    ],
+)
