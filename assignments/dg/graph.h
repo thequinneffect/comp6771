@@ -84,7 +84,10 @@ class Graph {
     bool InsertNode(const N& val);
     bool InsertEdge(const N& src, const N& dst, const E& w);
     bool DeleteNode(const N& deletee);
+    void Clear();
     bool IsNode(const N& val) const;
+    bool IsConnected(const N& src, const N& dst);
+    std::vector<N> GetNodes();
 
     const_iterator find(const N&, const N&, const E&);
 

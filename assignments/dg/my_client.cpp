@@ -200,6 +200,64 @@ int main() {
     std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
   }
 
+  std::cout << "testing clearing and then adding again\n";
+  gdwg::Graph<double, int> clear_me {di_tuple.begin(), di_tuple.end()};
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+  clear_me.Clear();
+  std::cout << "printing after clear\n";
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+  std::cout << "printing after adding after clear\n";
+  clear_me.InsertNode(1.1);
+  clear_me.InsertNode(2.2);
+  clear_me.InsertNode(3.3);
+  clear_me.InsertNode(4.4);
+  clear_me.InsertNode(5.5);
+  clear_me.InsertEdge(1.1, 1.1, 1);
+  clear_me.InsertEdge(1.1, 1.1, 2);
+  clear_me.InsertEdge(1.1, 1.1, -1);
+  clear_me.InsertEdge(2.2, 1.1, 1);
+  clear_me.InsertEdge(2.2, 2.2, 2);
+  clear_me.InsertEdge(3.3, 2.2, 3);
+  clear_me.InsertEdge(3.3, 3.3, 300);
+  clear_me.InsertEdge(1.1, 3.3, 60);
+  clear_me.InsertEdge(2.2, 3.3, 343);
+  clear_me.InsertEdge(4.4, 1.1, 4);
+  clear_me.InsertEdge(4.4, 4.4, 16);
+  clear_me.InsertEdge(2.2, 4.4, 8);
+
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << "test isconnected\n";
+  std::cout << "isconnected should be 1: " << clear_me.IsConnected(4.4, 1.1) << "\n";
+  std::cout << "isconnected should be 1: " << clear_me.IsConnected(4.4, 4.4) << "\n";
+  std::cout << "isconnected should be 1: " << clear_me.IsConnected(2.2, 4.4) << "\n";
+  std::cout << "isconnected should be 0: " << clear_me.IsConnected(4.4, 3.3) << "\n";
+  std::cout << "isconnected should be 0: " << clear_me.IsConnected(5.5, 5.5) << "\n";
+  std::cout << "isconnected should be 0: " << clear_me.IsConnected(4.4, 2.2) << "\n";
+  
+  std::cout << "testing getnodes\n";
+  auto node_vec1 = cs_il_graph_cpy.GetNodes();
+  auto node_vec2 = clear_me.GetNodes();
+  std::cout << "printing nodevec1\n";
+  for (auto node : node_vec1) {
+    std::cout << node << " ";
+  }
+  std::cout << "\nnow printing nodevec2\n";
+  for (auto node : node_vec2) {
+    std::cout << node << " ";
+  }
+  std::cout << "\n";
+
+
   // std::cout << "inserting edge 7.0, 2.3, 6 should fail: ";
   // std::cout << g_double_int.InsertEdge(7.0, 2.3, 6) << "\n";
   

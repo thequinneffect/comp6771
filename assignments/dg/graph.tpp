@@ -30,7 +30,6 @@ gdwg::Graph<N,E>::Graph(
         InsertNode(src);
         InsertNode(dst);
         /* insert the edge if it doesn't already exist */
-        std::cout << "trying to tuple insert [" << src << ", " << dst << ", " << weight << "]: ";
         std::cout << InsertEdge(src, dst, weight) << "\n";
     }
 }
@@ -162,9 +161,48 @@ bool gdwg::Graph<N,E>::DeleteNode(const N& deletee) {
 }
 
 template <typename N, typename E>
+void gdwg::Graph<N,E>::Clear() {
+    nodes_.clear();
+    edges_.clear();
+}
+
+template <typename N, typename E>
 bool gdwg::Graph<N,E>::IsNode(const N& val) const {
     auto node_it = this->nodes_.find(val);
     return node_it != this->nodes_.end();
+}
+
+template <typename N, typename E>
+bool gdwg::Graph<N,E>::IsConnected(const N& src, const N& dst) {
+    /* see if both nodes exists in the graph, if not throw */
+    auto src_it = this->nodes_.find(src);
+    auto dst_it = this->nodes_.find(dst);
+    if (src_it == this->nodes_.end() || dst_it == this->nodes_.end()) {
+        throw std::runtime_error("Cannot call Graph::IsConnected if src or dst node don't exist in the graph");
+    }
+    /* loop through all the outgoing edges of src */
+    for (auto oe_it = (*src_it)->outgoing_.begin();
+        oe_it != (*src_it)->outgoing_.end(); ++oe_it) {
+        if (oe_it->expired()) {
+            oe_it = (*src_it)->outgoing_.erase(oe_it);
+            continue;
+        } else {
+            auto edge_sp = oe_it->lock();
+            if (edge_sp->dst_->value_ == dst) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+template <typename N, typename E>
+std::vector<N> gdwg::Graph<N,E>::GetNodes() {
+    std::vector<N> node_vec {};
+    for (auto& node : nodes_) {
+        node_vec.push_back(node->value_);
+    }
+    return node_vec;
 }
 
 template <typename N, typename E>
