@@ -2,6 +2,7 @@
 //gdwg::Graph<N,E>::Graph() {}
 
 #include <algorithm>
+#include <initializer_list>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -33,6 +34,37 @@ gdwg::Graph<N,E>::Graph(
     }
 }
 
+// TODO: why isnt this a const initlist& ??? are we supposed to change it to this?
+template <typename N, typename E>
+gdwg::Graph<N, E>::Graph(std::initializer_list<N> il) {
+    for (auto it : il) {
+        InsertNode(it);
+    }
+}
+
+template <typename N, typename E>
+gdwg::Graph<N, E>::Graph(const gdwg::Graph<N, E>& orig) {
+    /* deep copy because we have unique ptrs inside graphs */
+
+    /* first copy the nodes. We can and should only copy by just
+     * passing in the N value because this will set the node 
+     * value but leave the incoming/outgoing sets for that Node
+     * empty (We cannot copy those because the Edge struct 
+     * pointers (addresses) refer to Nodes in orig, not this) */
+    for (auto on_it = orig.nodes_.begin(); 
+        on_it != orig.nodes_.end(); ++on_it) 
+    {
+        nodes_.insert(std::make_unique<Node>((*on_it)->value_));
+    }
+    /* now copy the edges. It isn't sufficient to just call this
+     * because then isolated nodes would not be in the graph */
+    for (auto oe_it = orig.edges_.begin();
+        oe_it != orig.edges_.end(); ++oe_it)
+    {
+        InsertEdge((*oe_it)->src_->value_, (*oe_it)->dst_->value_, (*oe_it)->value_);
+    }
+}
+
 template <typename N, typename E>
 bool gdwg::Graph<N,E>::InsertNode(const N& val)
 {
@@ -53,12 +85,14 @@ bool gdwg::Graph<N,E>::InsertEdge(const N& src, const N& dst, const E& w)
     /* if the edge already exists then exit */
     if (find(src, dst, w) != cend()) return false;
 
-    std::cout << "edge [" << src << ", " << dst << ", " << w << "] was not found in find(s,d,w)\n";
+    //std::cout << "edge [" << src << ", " << dst << ", " << w << "] was not found in find(s,d,w) and so should be inserted!\n";
     /* otherwise add the edge to the edges_ set and update the 
      * book-keeping on the src and dst Node stuctures */
     auto new_edge_it = edges_.insert(std::make_shared<Edge>(src_it->get(), dst_it->get(), w)).first;
-    if (new_edge_it == edges_.end()) std::cout << "THIS SHOULDN'T HAPPEN!\n";
-    //std::cout << "inserted edge was: " << src_it->get()  << " " << dst_it->get() << " " << (*it)->value_ << "\n";
+    // if (new_edge_it != edges_.end()) {
+    //     std::cout << "inserted (or prevented by) : " << (*new_edge_it)->src_->value_ << (*new_edge_it)->dst_->value_ << (*new_edge_it)->value_ << "\n";
+    // }
+    std::cout << "inserted edge was: " << src_it->get()  << " " << dst_it->get() << " " << (*new_edge_it)->value_ << "\n";
     bool out_succ = (*src_it)->outgoing_.insert(std::weak_ptr<Edge>(*new_edge_it)).second;
     bool in_succ = (*dst_it)->incoming_.insert(std::weak_ptr<Edge>(*new_edge_it)).second;
     std::cout << "updating src node success: " << out_succ << ", updating dst node success: " << in_succ << "\n";
@@ -74,14 +108,13 @@ bool gdwg::Graph<N,E>::IsNode(const N& val) const {
 template <typename N, typename E>
 typename gdwg::Graph<N,E>::const_iterator 
 gdwg::Graph<N,E>::find(const N& src, const N& dst, const E& w) {
-    std::cout << "trying to find edge [" << src << ", " << dst << ", " << w << "]\n";
     for (auto it = cbegin(); it != cend(); ++it) {
         if (src == std::get<0>(*it) && dst == std::get<1>(*it) && w == std::get<2>(*it)) {
-            std::cout << "node found was: " << std::get<0>(*it) << ", " << std::get<1>(*it) << ", " << std::get<2>(*it) << "\n";
+            //std::cout << "node found was: " << std::get<0>(*it) << ", " << std::get<1>(*it) << ", " << std::get<2>(*it) << "\n";
             return it;
         }
     }
-    std::cout << "didn't find node, returning cend()\n";
+    //std::cout << "didn't find node, returning cend()\n";
     return cend();
 }
 

@@ -1,11 +1,15 @@
 #ifndef ASSIGNMENTS_DG_GRAPH_H_
 #define ASSIGNMENTS_DG_GRAPH_H_
 
+#include <initializer_list>
 #include <memory>
 #include <set>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <vector>
+
+#include <cassert> // REMOVE AFTER DEBUG
 
 namespace gdwg {
 
@@ -63,11 +67,12 @@ class Graph {
       typename std::vector<N>::const_iterator b,
       typename std::vector<N>::const_iterator e
     );
-
     Graph(
       typename std::vector<std::tuple<N, N, E>>::const_iterator b,
       typename std::vector<std::tuple<N, N, E>>::const_iterator e
     );
+    Graph<N, E>(std::initializer_list<N> il);
+    Graph<N, E>(const gdwg::Graph<N, E>& orig);
 
     /* methods */
     bool InsertNode(const N& val);
@@ -92,35 +97,34 @@ class Graph {
 
     /* R is a resource (N or E), smart_ptr is any of the smart
     pointers to one of the wrapper structs (Node or Edge) */
+
     template <typename R, typename smart_ptr>
     struct WrapperComp {
         using is_transparent = R;
         bool operator()(const smart_ptr& a, const smart_ptr& b) const {
-          if constexpr (std::is_same<smart_ptr, std::weak_ptr<Edge>>::value) {
+          if constexpr (std::is_same<smart_ptr, std::shared_ptr<Edge>>::value) {
+            return std::tie(a->src_->value_, a->dst_->value_, a->value_) <
+                   std::tie(b->src_->value_, b->dst_->value_, b->value_);
+          } else if constexpr (std::is_same<smart_ptr, std::weak_ptr<Edge>>::value) {
             auto a_sp = a.lock();
             auto b_sp = b.lock();
-            return (*a_sp).value_ < (*b_sp).value_;
+            return std::tie(a_sp->src_->value_, a_sp->dst_->value_, a_sp->value_) < 
+                   std::tie(b_sp->src_->value_, b_sp->dst_->value_, b_sp->value_);
           } else {
-            return (*a).value_ < (*b).value_;
+            return a->value_ < b->value_;
           }
         }
         bool operator()(const smart_ptr& a, const R& value) const {
-          if constexpr (std::is_same<smart_ptr, std::weak_ptr<Edge>>::value) {
-            auto a_sp = a.lock();
-            return (*a_sp).value_ < value;
-          } else {
-            return (*a).value_ < value;
-          }
+          // TODO: remove this line and same line below, only for testing
+          if (std::is_same<R, E>::value) { assert(!"E used for WrapperComp!!!\n"); }
+          return a->value_ < value;
         }
         bool operator()(const R& value, const smart_ptr& b) const {
-          if constexpr (std::is_same<smart_ptr, std::weak_ptr<Edge>>::value) {
-            auto b_sp = b.lock();
-            return value < (*b_sp).value_;
-          } else {
-            return value < (*b).value_;
-          }
+          if (std::is_same<R, E>::value) { assert(!"E used for WrapperComp!!!\n"); }
+          return value < b->value_;
         }
       };
+      
 
   /*  */
     struct Node {
@@ -145,9 +149,12 @@ class Graph {
       E value_;
     };
 
-    /* owns all nodes */
+    /* set of all Nodes, which are owned by unique pointers. This instantiation of
+     * WrapperComp compares Nodes (orders) solely based on the Node value N. */
     std::set<std::unique_ptr<Node>, WrapperComp<N, std::unique_ptr<Node>>> nodes_;
-    /* owns all edges */
+    /* set of all Edges, owned by shared pointers. Note that there is only ever
+     * 1 shared pointer per Edge in this set. This instantiation of WrapperComp
+     * compares Edges (orders) solely based on Edge value E */
     std::set<std::shared_ptr<Edge>, WrapperComp<E, std::shared_ptr<Edge>>> edges_;
 };
 

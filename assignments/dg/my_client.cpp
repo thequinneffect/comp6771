@@ -75,7 +75,35 @@ int main() {
     std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
   }
 
+  std::cout << "testing creating a graph with an initialiser list\n";
+  gdwg::Graph<char, std::string> cs_il_graph { 'x', 'b', 'a', 'c', 'z', 'y', 'd'};
 
+  cs_il_graph.InsertEdge('x', 'b', "aaa");
+  cs_il_graph.InsertEdge('b', 'a', "bob");
+  cs_il_graph.InsertEdge('a', 'c', "bbb");
+  cs_il_graph.InsertEdge('a', 'c', "aaa");
+  cs_il_graph.InsertEdge('z', 'y', "aaa");
+  cs_il_graph.InsertEdge('y', 'x', "aaa");
+  cs_il_graph.InsertEdge('b', 'x', "aaa");
+  cs_il_graph.InsertEdge('b', 'x', "aaa");
+  cs_il_graph.InsertEdge('b', 'x', "Aaa");
+  cs_il_graph.InsertEdge('a', 'b', "ccc");
+  cs_il_graph.InsertEdge('a', 'd', "z");
+  cs_il_graph.InsertEdge('d', 'a', "z");
+  cs_il_graph.InsertEdge('d', 'b', "g");
+  cs_il_graph.InsertEdge('d', 'c', "f");
+
+  for (auto it : cs_il_graph) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << "copy constructing a graph with nodes and edges\n";
+  gdwg::Graph<char, std::string> cs_il_graph_cpy {cs_il_graph};
+  for (auto it : cs_il_graph_cpy) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }  
 
   // std::cout << "inserting edge 7.0, 2.3, 6 should fail: ";
   // std::cout << g_double_int.InsertEdge(7.0, 2.3, 6) << "\n";
