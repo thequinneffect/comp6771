@@ -105,6 +105,101 @@ int main() {
     std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
   }  
 
+  std::cout << "move constructing a graph with nodes and edges\n";
+  gdwg::Graph<char, std::string> cs_il_graph_mv {std::move(cs_il_graph)};
+  for (auto it : cs_il_graph_mv) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }  
+
+  std::cout << "move constructing a graph with nodes and edges v2 w/ auto\n";
+  auto auto_moved_g {std::move(b)};
+  for (auto it : auto_moved_g) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << "testing dtor (letting graph go out of scope)\n";
+  {
+    std::cout << "testing creating a graph with an initialiser list\n";
+    gdwg::Graph<char, std::string> cs_il_graph { 'x', 'b', 'a', 'c', 'z', 'y', 'd'};
+
+    cs_il_graph.InsertEdge('x', 'b', "aaa");
+    cs_il_graph.InsertEdge('b', 'a', "bob");
+    cs_il_graph.InsertEdge('a', 'c', "bbb");
+    cs_il_graph.InsertEdge('a', 'c', "aaa");
+    cs_il_graph.InsertEdge('z', 'y', "aaa");
+    cs_il_graph.InsertEdge('y', 'x', "aaa");
+    cs_il_graph.InsertEdge('b', 'x', "aaa");
+    cs_il_graph.InsertEdge('b', 'x', "aaa");
+    cs_il_graph.InsertEdge('b', 'x', "Aaa");
+    cs_il_graph.InsertEdge('a', 'b', "ccc");
+    cs_il_graph.InsertEdge('a', 'd', "z");
+    cs_il_graph.InsertEdge('d', 'a', "z");
+    cs_il_graph.InsertEdge('d', 'b', "g");
+    cs_il_graph.InsertEdge('d', 'c', "f");
+  }
+
+  std::cout << "testing dtor (does copy going out of scope break orig)\n";
+  {
+    gdwg::Graph<char, std::string> cs_il_graph_cpy2 {cs_il_graph_cpy};
+  }
+  std::cout << "printing original to see if it's valid\n";
+  for (auto it : cs_il_graph_cpy) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }    
+
+  std::cout << "testing dtor (does orig going out of scope break copy)\n";
+  {
+    gdwg::Graph<char, std::string> cs_il_graph_cpy3 {cs_il_graph_cpy};
+    {
+      gdwg::Graph<char, std::string> cs_il_graph_movee = std::move(cs_il_graph_cpy3);
+    }
+  }
+
+  std::cout << "test creating a copy via assignment, and that changing the copy doesn't change original\n";
+  gdwg::Graph<double, int> copy_assign_me {di_tuple.begin(), di_tuple.end()};
+  gdwg::Graph<double, int> copy_assigned {copy_assign_me};
+  copy_assigned.InsertEdge(1.1, 4.2, 9);
+  for (auto it : copy_assign_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+  for (auto it : copy_assigned) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << "test move assignment, and that changing the moved from one doesn't change new one\n";
+  gdwg::Graph<double, int> move_assigned {std::move(copy_assigned)};
+  copy_assigned.~Graph();
+  for (auto it : move_assigned) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << "testing calling DeleteNode\n";
+  move_assigned.InsertEdge(4.2, 1.1, 101);
+  move_assigned.InsertEdge(4.2, 4.3, 101);
+  move_assigned.InsertEdge(4.2, 6.5, 101);
+  move_assigned.InsertEdge(4.2, 7.0, 101);
+  move_assigned.InsertEdge(1.1, 4.2, 101);
+  move_assigned.InsertEdge(4.3, 4.2, 101);
+  move_assigned.InsertEdge(6.5, 4.2, 101);
+  move_assigned.InsertEdge(7.0, 4.2, 101);
+  std::cout << "before delete print;\n";
+  for (auto it : move_assigned) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+  move_assigned.DeleteNode(4.2);
+  std::cout << "after delete print;\n";
+  for (auto it : move_assigned) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
   // std::cout << "inserting edge 7.0, 2.3, 6 should fail: ";
   // std::cout << g_double_int.InsertEdge(7.0, 2.3, 6) << "\n";
   

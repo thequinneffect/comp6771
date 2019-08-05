@@ -5,6 +5,7 @@
 #include <initializer_list>
 #include <iostream>
 #include <memory>
+#include <utility>
 #include <vector>
 
 template <typename N, typename E>
@@ -66,6 +67,43 @@ gdwg::Graph<N, E>::Graph(const gdwg::Graph<N, E>& orig) {
 }
 
 template <typename N, typename E>
+gdwg::Graph<N, E>::Graph(gdwg::Graph<N, E>&& recyclee) {
+
+    nodes_ = std::move(recyclee.nodes_);
+    edges_ = std::move(recyclee.edges_);
+
+}
+
+template <typename N, typename E>
+gdwg::Graph<N, E>& 
+gdwg::Graph<N,E>::operator=(const gdwg::Graph<N, E>& other) {
+    /* this is essentially the same as the copy ctor, and
+     * I am doing the same thing for the same reasons so
+     * see it's comment :) */
+    /* deep copy nodes */
+    for (auto on_it = other.nodes_.begin(); 
+        on_it != other.nodes_.end(); ++on_it) 
+    {
+        nodes_.insert(std::make_unique<Node>((*on_it)->value_));
+    }
+    /* deep copy edges */
+    for (auto oe_it = other.edges_.begin();
+        oe_it != other.edges_.end(); ++oe_it)
+    {
+        InsertEdge((*oe_it)->src_->value_, (*oe_it)->dst_->value_, (*oe_it)->value_);
+    }
+    return *this;
+}
+
+template <typename N, typename E>
+gdwg::Graph<N, E>& 
+gdwg::Graph<N,E>::operator=(gdwg::Graph<N, E>&& recyclee) {
+    nodes_ = std::move(recyclee.nodes_);
+    edges_ = std::move(recyclee.edges_);
+    return *this;
+}
+
+template <typename N, typename E>
 bool gdwg::Graph<N,E>::InsertNode(const N& val)
 {
     /* if the graph doesn't already contain this node then insert */
@@ -92,11 +130,35 @@ bool gdwg::Graph<N,E>::InsertEdge(const N& src, const N& dst, const E& w)
     // if (new_edge_it != edges_.end()) {
     //     std::cout << "inserted (or prevented by) : " << (*new_edge_it)->src_->value_ << (*new_edge_it)->dst_->value_ << (*new_edge_it)->value_ << "\n";
     // }
-    std::cout << "inserted edge was: " << src_it->get()  << " " << dst_it->get() << " " << (*new_edge_it)->value_ << "\n";
+    //std::cout << "inserted edge was: " << src_it->get()  << " " << dst_it->get() << " " << (*new_edge_it)->value_ << "\n";
     bool out_succ = (*src_it)->outgoing_.insert(std::weak_ptr<Edge>(*new_edge_it)).second;
     bool in_succ = (*dst_it)->incoming_.insert(std::weak_ptr<Edge>(*new_edge_it)).second;
-    std::cout << "updating src node success: " << out_succ << ", updating dst node success: " << in_succ << "\n";
+    //std::cout << "updating src node success: " << out_succ << ", updating dst node success: " << in_succ << "\n";
     return (out_succ && in_succ);
+}
+
+template <typename N, typename E>
+bool gdwg::Graph<N,E>::DeleteNode(const N& deletee) {
+
+    /* no point doing the below edges stuff if it doesn't exist */
+    if (!IsNode(deletee)) return false;
+
+    /* firstly need to delete the nodes edges */
+    for (auto edges_it = edges_.begin(); edges_it != edges_.end(); ) {
+        /* if the deletee node is part of this edge then delete it */
+        if ((*edges_it)->src_->value_ == deletee
+            || (*edges_it)->dst_->value_ == deletee)  {
+            edges_it = edges_.erase(edges_it);
+        } else { // otherwise just continue
+            ++edges_it;
+        }
+    }
+
+    /* now I can delete the node */
+    auto deletee_it = this->nodes_.find(deletee);
+    if (deletee_it == this->nodes_.end()) return false;
+    nodes_.erase(deletee_it);
+    return true;
 }
 
 template <typename N, typename E>
@@ -121,17 +183,25 @@ gdwg::Graph<N,E>::find(const N& src, const N& dst, const E& w) {
 template <typename N, typename E>
 typename gdwg::Graph<N,E>::const_iterator::reference 
 gdwg::Graph<N,E>::const_iterator::operator*() const {
+    // std::cout << "const_iterator operator* called\n";
     const N& src_val = (*node_it_)->value_;
+    // std::cout << "deref'ing for src was fine\n";
+    if (edge_it_->expired()) std::cout << "edge_it_ is expired!\n";
     auto edge_sp = (*edge_it_).lock();
+    // std::cout << "locking  was fine\n";
     const N& dst_val = edge_sp->dst_->value_;
+    // std::cout << "deref'ing for dst was fine\n";
     const E& edge_val = edge_sp->value_;
+    // std::cout << "deref'ing for edge was fine\n";
     return {src_val, dst_val, edge_val};
 }
 
 template <typename N, typename E>
 typename gdwg::Graph<N,E>::const_iterator gdwg::Graph<N,E>::cbegin() {
+    // std::cout << "const_iterator cbegin called\n";
     /* nodes_it is a up<Node> iterator. 1 deref gives up<Node>, 2 gives Node */
     for (auto nodes_it = nodes_.begin(); nodes_it != nodes_.end(); ++nodes_it) {
+
         auto edges_it = (*nodes_it)->outgoing_.begin();
         auto edges_end = (*nodes_it)->outgoing_.end();
 
@@ -139,9 +209,12 @@ typename gdwg::Graph<N,E>::const_iterator gdwg::Graph<N,E>::cbegin() {
         while (edges_it != edges_end) {
             /* remove any expired wp's as we iterate through */
             if (edges_it->expired()) {
+                //std::cout << "edges_it in cbegin is expired, removing it!\n";
                 edges_it = ((*nodes_it)->outgoing_).erase(edges_it);
+                continue;
             } else { /* not expired, so this is the first valid edge */
                 //std::cout << "values are: " << nodes_it << " " << edges_it << " " << nodes_.end() << "\n";
+                //std::cout << "edges_it in cbegin is not expired, returning it!\n";
                 return {nodes_it, edges_it, nodes_.end()};
             }
             ++edges_it;
@@ -152,35 +225,66 @@ typename gdwg::Graph<N,E>::const_iterator gdwg::Graph<N,E>::cbegin() {
 
 template <typename N, typename E>
 typename gdwg::Graph<N,E>::const_iterator gdwg::Graph<N,E>::cend() {
+    // std::cout << "const_iterator cend called\n";
     return {nodes_.end(), {}, nodes_.end()};
 }
 
 // TODO: factor out similarity of this with cbegin()
 template <typename N, typename E>
 typename gdwg::Graph<N,E>::const_iterator& gdwg::Graph<N,E>::const_iterator::operator++() {
-    /* we need to increment the edge iterator */
+    //std::cout << "const_iterator operator++ called\n";
+    // /* we need to increment the edge iterator */
+    // ++edge_it_;
+    // /* if the edge iterator got to the end of the edges for
+    //  * the current node, OR it is an expired edge,
+    //  *  then we need to go to the next node */
+    // if (edge_it_ == (*node_it_)->outgoing_.end()
+    //     || edge_it_->expired()) {
+    //     if (edge_it_ == (*node_it_)->outgoing_.end()) {
+    //         ++node_it_;
+    //     }
+    //     for (; node_it_ != node_end_it_; ++node_it_) {
+
+    //         auto edges_it = (*node_it_)->outgoing_.begin();
+    //         //auto edges_end = (*node_it_)->outgoing_.end();
+
+    //         /* loop through the current nodes outgoing edges */
+    //         for (; edges_it != (*node_it_)->outgoing_.end();) {
+    //             /* remove any expired wp's as we iterate through */
+    //             if (edges_it->expired()) {
+    //                 std::cout << "edges_it in operator++ is expired, removing it!\n";
+    //                 edges_it = ((*node_it_)->outgoing_).erase(edges_it);
+    //                 continue;
+    //             } else { /* not expired, so this is the first valid edge */
+    //                 std::cout << "edges_it in operator++ is not expired, returning it!\n";
+    //                 edge_it_ = edges_it;
+    //                 return *this;
+    //             }
+    //             ++edges_it;
+    //         }
+    //     }
+    //     /* edge it needs to be {} so it compares == with end now */ // TODO: is this correct?
+    //     edge_it_ = typename std::set<std::weak_ptr<Edge>>::iterator{};
+    // }
+    // return *this;
+
+    /* increment the edge iterator */
     ++edge_it_;
-    /* if the edge iterator got to the end of the edges for
-     * the current node, then we need to go to the next node */
-    if (edge_it_ == (*node_it_)->outgoing_.end()) {
-        for (++node_it_; node_it_ != node_end_it_; ++node_it_) {
 
-            auto edges_it = (*node_it_)->outgoing_.begin();
-            //auto edges_end = (*node_it_)->outgoing_.end();
-
-            /* loop through the current nodes outgoing edges */
-            for (; edges_it != (*node_it_)->outgoing_.end(); ++edges_it) {
-                /* remove any expired wp's as we iterate through */
-                if (edges_it->expired()) {
-                    edges_it = ((*node_it_)->outgoing_).erase(edges_it);
-                } else { /* not expired, so this is the first valid edge */
-                    edge_it_ = edges_it;
-                    return *this;
-                }
+    /* it is now possible that edge_it_ is actually the end() iterator
+     * of the current edges container (i.e. node->outgoing set) we are up
+     * to OR it is an expired edge (weak pointer it refers to is expired) */
+    while (edge_it_ == (*node_it_)->outgoing_.end() || edge_it_->expired()) {
+        if (edge_it_ == (*node_it_)->outgoing_.end()) {
+            ++node_it_;
+            if (node_it_ == node_end_it_) {
+                edge_it_ = typename std::set<std::weak_ptr<Edge>>::iterator{};
+                return *this;
             }
+            edge_it_ = (*node_it_)->outgoing_.begin();
+        } else {
+            edge_it_ = (*node_it_)->outgoing_.erase(edge_it_);
         }
-        /* edge it needs to be {} so it compares == with end now */ // TODO: is this correct?
-        edge_it_ = typename std::set<std::weak_ptr<Edge>>::iterator{};
     }
     return *this;
 }

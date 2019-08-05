@@ -61,7 +61,7 @@ class Graph {
           }
     };
     
-    
+    /* ctors and dtor */
     Graph()=default;
     Graph(
       typename std::vector<N>::const_iterator b,
@@ -73,10 +73,17 @@ class Graph {
     );
     Graph<N, E>(std::initializer_list<N> il);
     Graph<N, E>(const gdwg::Graph<N, E>& orig);
+    Graph<N, E>(gdwg::Graph<N, E>&& recyclee);
+    ~Graph<N, E>()=default;
+
+    /* operators */
+    Graph<N, E>& operator=(const gdwg::Graph<N, E>& other);
+    Graph<N, E>& operator=(gdwg::Graph<N, E>&& recyclee);
 
     /* methods */
     bool InsertNode(const N& val);
     bool InsertEdge(const N& src, const N& dst, const E& w);
+    bool DeleteNode(const N& deletee);
     bool IsNode(const N& val) const;
 
     const_iterator find(const N&, const N&, const E&);
@@ -106,6 +113,8 @@ class Graph {
             return std::tie(a->src_->value_, a->dst_->value_, a->value_) <
                    std::tie(b->src_->value_, b->dst_->value_, b->value_);
           } else if constexpr (std::is_same<smart_ptr, std::weak_ptr<Edge>>::value) {
+            // TODO: remove this line after testing
+            if (a.expired() || b.expired()) assert(!"WrapperComp got an expired wp!\n");
             auto a_sp = a.lock();
             auto b_sp = b.lock();
             return std::tie(a_sp->src_->value_, a_sp->dst_->value_, a_sp->value_) < 
