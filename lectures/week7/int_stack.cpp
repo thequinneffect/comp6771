@@ -93,7 +93,7 @@ int main() {
 
   auto check_present = [&] (int value) {
     std::cout << "Is " << value << " present: "
-              << (std::find(begin(l), end(l), 5) != end(l)) << '\n';
+              << (std::find(begin(l), end(l), value) != end(l)) << '\n';
   };
   check_present(5);
   check_present(99);
