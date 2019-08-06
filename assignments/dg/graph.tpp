@@ -235,7 +235,7 @@ bool gdwg::Graph<N, E>::IsNode(const N& val) const {
 }
 
 template <typename N, typename E>
-bool gdwg::Graph<N, E>::IsConnected(const N& src, const N& dst) {
+bool gdwg::Graph<N, E>::IsConnected(const N& src, const N& dst) const {
   /* see if both nodes exists in the graph, if not throw */
   auto src_it = this->nodes_.find(src);
   auto dst_it = this->nodes_.find(dst);
@@ -268,7 +268,7 @@ std::vector<N> gdwg::Graph<N, E>::GetNodes() const {
 }
 
 template <typename N, typename E>
-std::vector<N> gdwg::Graph<N, E>::GetConnected(const N& src) {
+std::vector<N> gdwg::Graph<N, E>::GetConnected(const N& src) const {
   /* see if the src node even exists, throw if not */
   auto src_it = this->nodes_.find(src);
   if (src_it == this->nodes_.end()) {
@@ -289,7 +289,7 @@ std::vector<N> gdwg::Graph<N, E>::GetConnected(const N& src) {
 }
 
 template <typename N, typename E>
-std::vector<E> gdwg::Graph<N, E>::GetWeights(const N& src, const N& dst) {
+std::vector<E> gdwg::Graph<N, E>::GetWeights(const N& src, const N& dst) const {
   /* see if both nodes exists in the graph, if not throw */
   auto src_it = this->nodes_.find(src);
   if (src_it == this->nodes_.end() || !IsNode(dst)) {
@@ -398,14 +398,17 @@ typename gdwg::Graph<N, E>::const_iterator& gdwg::Graph<N, E>::const_iterator::o
    * of the current edges container (i.e. node->outgoing set) we are up
    * to OR it is an expired edge (weak pointer it refers to is expired) */
   while (edge_it_ == (*node_it_)->outgoing_.end() || edge_it_->expired()) {
+    /* if we got to the end of current outgoing edges set, go to next nodes one */
     if (edge_it_ == (*node_it_)->outgoing_.end()) {
       ++node_it_;
+      /* if there was no next node, return equivalent of empty iterator */
       if (node_it_ == node_end_it_) {
         edge_it_ = typename std::set<std::weak_ptr<Edge>>::iterator{};
         return *this;
       }
+      /* otherwise set the edge iterator to be the begin of the new edges set */
       edge_it_ = (*node_it_)->outgoing_.begin();
-    } else {
+    } else { /* we got an expired edge */
       edge_it_ = (*node_it_)->outgoing_.erase(edge_it_);
     }
   }
@@ -414,29 +417,49 @@ typename gdwg::Graph<N, E>::const_iterator& gdwg::Graph<N, E>::const_iterator::o
 
 template <typename N, typename E>
 typename gdwg::Graph<N, E>::const_iterator& gdwg::Graph<N, E>::const_iterator::operator--() {
-  std::cout << "-- was called\n";
-  /* if the edge iterator is at begin() of its set than it cannot be
-   * decremented */
+  /* if we were off the end, then restore to valid state */
+  if (node_it_ == node_end_it_) {
+    --node_it_;
+    /* skip empty edge sets and return equivalent of end if we
+     * make it to node reverse end */
+    while ((*node_it_)->outgoing_.begin() == (*node_it_)->outgoing_.end()) {
+      if (node_it_ == node_rend_it_) {
+        edge_it_ = typename std::set<std::weak_ptr<Edge>>::iterator{};
+        return *this;
+      }
+      --node_it_;
+    }
+    edge_it_ = (*node_it_)->outgoing_.end();
+  }
+  /* at this stage it is guaranteed that we either returned
+   * the equivlent of end() OR both the node it and edge it
+   * are valid (but edge it is pointing to end()) */
   if (edge_it_ != (*node_it_)->outgoing_.begin()) {
     --edge_it_;
+    if (!edge_it_->expired())
+      return *this;
   }
 
-  /* if we are at the start of a set (begin) or current edge
-   * is expired then we need to keep decrementing */
-  while (node_it_ != node_rend_it_ &&
-         (edge_it_ == (*node_it_)->outgoing_.begin() || edge_it_->expired())) {
-    /* if the edge is expired and it's the begin edge */
-    if (edge_it_ == (*node_it_)->outgoing_.begin() && edge_it_->expired()) {
-      (*node_it_)->outgoing_.erase(edge_it_);
-      --node_it_;
-      edge_it_ = --(*node_it_)->outgoing_.end();
-      /* if the edge was beginning edge but not expired */
-    } else if (edge_it_ == (*node_it_)->outgoing_.begin()) {
-      --node_it_;
-      edge_it_ = --(*node_it_)->outgoing_.end();
-      /* else it's expired, but not the beginning edge */
-    } else {
-      edge_it_ = --(*node_it_)->outgoing_.erase(edge_it_);
+  /* only need to keep decrementing if we have an expired edge or we're
+  at the beginning of an edge set */
+  while (edge_it_->expired() || edge_it_ == (*node_it_)->outgoing_.begin()) {
+    if (edge_it_ == (*node_it_)->outgoing_.begin()) {
+      /* try find the prev node edge set */
+      do {
+        /* if there is no previous nodes, return equivalent of end() */
+        if (node_it_ == node_rend_it_) {
+          edge_it_ = typename std::set<std::weak_ptr<Edge>>::iterator{};
+          return *this;
+        }
+        /* otherwise go to previous node */
+        --node_it_;
+      } while ((*node_it_)->outgoing_.begin() == (*node_it_)->outgoing_.end());
+      /* got a previous node without an empty out edge set, set edge it to its last edge */
+      edge_it_ = --((*node_it_)->outgoing_.end());
+      if (!edge_it_->expired())
+        return *this;
+    } else { /* got an expired edge (not beginning though) */
+      edge_it_ = --((*node_it_)->outgoing_.erase(edge_it_));
     }
   }
   return *this;
@@ -445,6 +468,7 @@ typename gdwg::Graph<N, E>::const_iterator& gdwg::Graph<N, E>::const_iterator::o
 template <typename N, typename E>
 typename gdwg::Graph<N, E>::const_iterator::reference gdwg::Graph<N, E>::const_iterator::
 operator*() const {
+  // std::cout << "operator* was called\n";
   const N& src_val = (*node_it_)->value_;
   // std::cout << "deref'ing for src was fine\n";
   if (edge_it_->expired())

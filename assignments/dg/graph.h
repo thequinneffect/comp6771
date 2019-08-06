@@ -9,8 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include <cassert>  // REMOVE AFTER DEBUG
-
 namespace gdwg {
 
 template <typename N, typename E>
@@ -43,6 +41,9 @@ class Graph {
       return copy;
     }
 
+    /* the iterators are only equal if their node iterator (outside) is equal,
+     * and the node iterators are either both the end() or they aren't and
+     * in that case they are then only equal if they are up to the same edge */
     friend bool operator==(const const_iterator& lhs, const const_iterator& rhs) {
       return lhs.node_it_ == rhs.node_it_ &&
              (lhs.node_it_ == lhs.node_end_it_ || lhs.edge_it_ == rhs.edge_it_);
@@ -52,6 +53,8 @@ class Graph {
     }
 
    private:
+    /* we need an outer, inner, way of tracking end of outer, and
+     * way of tracking reverse end of outer */
     typename std::set<std::unique_ptr<Node>>::iterator node_it_;
     typename std::set<std::weak_ptr<Edge>>::iterator edge_it_;
     const typename std::set<std::unique_ptr<Node>>::iterator node_end_it_;
@@ -88,10 +91,10 @@ class Graph {
   void MergeReplace(const N& replacee, const N& replacer);
   void Clear();
   bool IsNode(const N& val) const;
-  bool IsConnected(const N& src, const N& dst);
+  bool IsConnected(const N& src, const N& dst) const;
   std::vector<N> GetNodes() const;
-  std::vector<N> GetConnected(const N& src);
-  std::vector<E> GetWeights(const N& src, const N& dst);
+  std::vector<N> GetConnected(const N& src) const;
+  std::vector<E> GetWeights(const N& src, const N& dst) const;
   const_iterator find(const N&, const N&, const E&) const;
   bool erase(const N& src, const N& dst, const E& w);
   const_iterator erase(const_iterator it);
@@ -110,7 +113,7 @@ class Graph {
 
   /* friend methods */
   friend bool operator==(const gdwg::Graph<N, E>& lhs, const gdwg::Graph<N, E>& rhs) {
-    /* first see if they the same nodes */
+    /* first see if they have the same nodes */
     if (lhs.GetNodes() != rhs.GetNodes())
       return false;
     /* now, for each edge in lhs, find it in rhs */
@@ -136,7 +139,7 @@ class Graph {
       os << node_up->value_ << " (\n";
       /* now for each outgoing edge that node has, print it out */
       for (auto edge_wp : node_up->outgoing_) {
-        /* so long as the edge isn't expired, we can print it */
+        /* but only if the edge isn't expired */
         if (!edge_wp.expired()) {
           auto edge_sp = edge_wp.lock();
           os << "  " << edge_sp->dst_->value_ << " | " << edge_sp->value_ << "\n";
@@ -150,30 +153,37 @@ class Graph {
  private:
   /* R is a resource (N or E), smart_ptr is any of the smart
   pointers to one of the wrapper structs (Node or Edge) */
-
   template <typename R, typename smart_ptr>
   struct WrapperComp {
     using is_transparent = R;
     bool operator()(const smart_ptr& a, const smart_ptr& b) const {
+      /* if we want to compare edges then we need to compare src, dst, w, in that order
+       * std::tie lets us easily do this */
       if constexpr (std::is_same<smart_ptr, std::shared_ptr<Edge>>::value) {
         return std::tie(a->src_->value_, a->dst_->value_, a->value_) <
                std::tie(b->src_->value_, b->dst_->value_, b->value_);
       } else if constexpr (std::is_same<smart_ptr, std::weak_ptr<Edge>>::value) {
-        if (a.expired() || b.expired())
+        /* if it's a weak pointer to an edge then we must promote it to a shared
+         * pointer first before comparing */
+        if (a.expired() || b.expired()) /* expired shouldn't give any ordering */
           return false;
         auto a_sp = a.lock();
         auto b_sp = b.lock();
         return std::tie(a_sp->src_->value_, a_sp->dst_->value_, a_sp->value_) <
                std::tie(b_sp->src_->value_, b_sp->dst_->value_, b_sp->value_);
       } else {
+        /* Nodes are only compared by their value (and we are guaranteed to be
+         * using unique pointers here for a and b as that's what nodes use) */
         return a->value_ < b->value_;
       }
     }
+    /* allows for using non-keys/pseudo keys in our sets */
     bool operator()(const smart_ptr& a, const R& value) const { return a->value_ < value; }
     bool operator()(const R& value, const smart_ptr& b) const { return value < b->value_; }
   };
 
-  /*  */
+  /* a wrapper for N's. This is to keep the N, and its associated incoming and outgoing
+   * edges all in the one place */
   struct Node {
     explicit Node(N val) : value_{val} {};
     /* the set of 0..* incoming edges */
@@ -183,7 +193,8 @@ class Graph {
     N value_;
   };
 
-  /* */
+  /* a wrapper for E's. This is so we can have each E associated with its
+   * src and dst node */
   struct Edge {
     Edge(Node* src, Node* dst, E value) : src_{src}, dst_{dst}, value_{value} {}
     Node* src_;  // exactly 1
@@ -196,7 +207,7 @@ class Graph {
   std::set<std::unique_ptr<Node>, WrapperComp<N, std::unique_ptr<Node>>> nodes_;
   /* set of all Edges, owned by shared pointers. Note that there is only ever
    * 1 shared pointer per Edge in this set. This instantiation of WrapperComp
-   * compares Edges (orders) solely based on Edge value E */
+   * compares Edges (orders) based on src, then dst, then edge weight */
   std::set<std::shared_ptr<Edge>, WrapperComp<E, std::shared_ptr<Edge>>> edges_;
 };
 

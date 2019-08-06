@@ -455,4 +455,34 @@ int main() {
   std::cout << "merging now\n";
   ci_mr_g2.MergeReplace('b', 'a');
   std::cout << ci_mr_g2;  
+
+  {
+  std::cout << "now testing reverse iterator\n";
+  auto rb = clear_me.rbegin();
+  auto re = clear_me.rend();
+  (void)rb;
+  (void)re;
+  std::cout << "making rb and re succeeded\n";
+
+  std::cout << "print out graph first\n";
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << "about to deref rb\n";
+  auto [s, d, w] = *rb;
+  std::cout << "[" << s << ", " << d << ", " << w << "]\n";
+
+  std::cout << "about to fully reverse iterate\n";
+  for (auto rb = clear_me.rbegin(); rb != clear_me.rend(); ++rb) {
+    auto [s, d, w] = *rb;
+    std::cout << "[" << s << ", " << d << ", " << w << "]\n";
+  }
+
+  }
+
+  
+  
+
 }
