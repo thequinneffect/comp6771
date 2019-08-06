@@ -366,7 +366,42 @@ int main() {
     std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
   }
 
-  std::cout << "testing reverse iterators!\n";
+  std::cout << "testing -- operator for iterator\n";
+  int i = 1;
+  for (auto it = clear_me.begin(); it != clear_me.end(); ++it, ++i) {
+    if (i == 7) {
+      std::cout << "iterator going backwards one! current = ";
+      auto [from, to, weight] = *it;
+      std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+      --it;
+      auto [from2, to2, weight2] = *it;
+      std::cout << "[" << from2 << ", " << to2 << ", " << weight2 << "]\n";
+    } else {
+      std::cout << "iterator going forwards one! current = ";
+      auto [from, to, weight] = *it;
+      std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+    }
+  }
+
+  std::cout << "testing graph equality comparisons\n";
+  gdwg::Graph<double, int> lhs {di_tuple.begin(), di_tuple.end()};
+  gdwg::Graph<double, int> rhs {di_tuple.begin(), di_tuple.end()};
+  std::cout << "should be equal: " << (lhs == rhs) << ", " << (lhs != rhs) << "\n";
+  rhs.erase(4.2, 2.3, 3);
+  std::cout << "should not be equal: " << (lhs == rhs) << ", " << (lhs != rhs) << "\n";
+  rhs.InsertEdge(4.2, 2.3, 3);
+  std::cout << "should be equal: " << (lhs == rhs) << ", " << (lhs != rhs) << "\n";
+  
+  std::cout << lhs;
+
+  // std::cout << "testing reverse iterators!\n";
+  // std::cout << "creating rb\n";
+  // auto rb = clear_me.rbegin();
+  // std::cout << "creating re\n";
+  // auto re = clear_me.end();
+  // (void)rb;
+  // (void)re;
+  // std::cout << "looping\n";
   // for (auto rit = clear_me.rbegin(); rit != clear_me.rend(); ++rit) {
   //   auto [from, to, weight] = *rit;
   //   std::cout << "[" << from << ", " << to << ", " << weight << "]\n";

@@ -27,6 +27,8 @@ class Graph {
         using iterator_category = std::bidirectional_iterator_tag;
         using value_type = std::tuple<N,N,E>;
         using reference = std::tuple<const N&, const N&, const E&>;
+        using pointer = void;
+        using difference_type = int;
 
         // may have to double deref these things because they are iterators to smart ptrs to things
         // 1 deref gives you smart ptr, 2 deref gives you thing
@@ -35,6 +37,12 @@ class Graph {
         const_iterator operator++(int) {
           auto copy{*this};
           ++(*this);
+          return copy;
+        }
+        const_iterator& operator--();
+        const_iterator operator--(int) {
+          auto copy{*this};
+          --(*this);
           return copy;
         }
 
@@ -48,17 +56,18 @@ class Graph {
         typename std::set<std::unique_ptr<Node>>::iterator node_it_;
         typename std::set<std::weak_ptr<Edge>>::iterator edge_it_;
         const typename std::set<std::unique_ptr<Node>>::iterator node_end_it_;
+        const typename std::set<std::unique_ptr<Node>>::iterator node_rend_it_;
 
         friend class Graph;
         const_iterator(
           const decltype(node_it_)& node_it, 
           const decltype(edge_it_)& edge_it,
-          const decltype(node_end_it_)& node_end_it)
+          const decltype(node_end_it_)& node_end_it,
+          const decltype(node_rend_it_)& node_rend_it)
           : node_it_{node_it}
           , edge_it_{edge_it}
-          , node_end_it_{node_end_it} {
-            //std::cout << "const_iterator ctor called!\n";
-          }
+          , node_end_it_{node_end_it}
+          , node_rend_it_{node_rend_it} {}
     };
     
     /* ctors and dtor */
@@ -87,24 +96,60 @@ class Graph {
     void Clear();
     bool IsNode(const N& val) const;
     bool IsConnected(const N& src, const N& dst);
-    std::vector<N> GetNodes();
+    std::vector<N> GetNodes() const;
     std::vector<N> GetConnected(const N& src);
     std::vector<E> GetWeights(const N& src, const N& dst);
-    const_iterator find(const N&, const N&, const E&);
+    const_iterator find(const N&, const N&, const E&) const;
     bool erase(const N& src, const N& dst, const E& w);
     const_iterator erase(const_iterator it);
 
     /* iterator methods */
     /* auto generate our reverse iterator from normal iterator */
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-    const_iterator cbegin();
-    const_iterator cend();
-    const_iterator begin() { return cbegin(); };
-    const_iterator end() { return cend(); };
-    const_reverse_iterator crbegin();
-    const_reverse_iterator crend();
-    const_reverse_iterator rbegin();
-    const_reverse_iterator rend();
+    const_iterator cbegin() const;
+    const_iterator cend() const;
+    const_iterator begin() const { return cbegin(); };
+    const_iterator end() const { return cend(); };
+    const_reverse_iterator crbegin() const { return const_reverse_iterator{cend()}; };
+    const_reverse_iterator crend() const { return const_reverse_iterator{cbegin()}; };
+    const_reverse_iterator rbegin() const { return crbegin(); };
+    const_reverse_iterator rend() const { return crend(); };
+
+    /* friend methods */
+    friend bool operator==(const gdwg::Graph<N, E>& lhs, const gdwg::Graph<N, E>& rhs) {
+      /* first see if they the same nodes */
+      if (lhs.GetNodes() != rhs.GetNodes()) return false;
+      /* now, for each edge in lhs, find it in rhs */
+      for (auto lhs_it = lhs.cbegin(); lhs_it != lhs.cend(); ++lhs_it) {
+        auto [src, dst, w] = *lhs_it;
+        if (rhs.find(src, dst, w) == rhs.cend()) return false;
+      }
+      /* and the same for rhs to lhs */
+      for (auto rhs_it = rhs.cbegin(); rhs_it != rhs.cend(); ++rhs_it) {
+        auto [src, dst, w] = *rhs_it;
+        if (lhs.find(src, dst, w) == lhs.cend()) return false;
+      }
+      return true;
+    }	
+    friend bool operator!=(const gdwg::Graph<N, E>& lhs, const gdwg::Graph<N, E>& rhs) {
+      return !(lhs == rhs);
+    }
+    friend std::ostream& operator<<(std::ostream& os, const gdwg::Graph<N, E>& g) {
+      /* loop through the nodes_ set */
+      for (auto& node_up : g.nodes_) {
+        os << node_up->value_ << " (\n";
+        /* now for each outgoing edge that node has, print it out */
+        for (auto edge_wp : node_up->outgoing_) {
+          /* so long as the edge isn't expired, we can print it */
+          if (!edge_wp.expired()) {
+            auto edge_sp = edge_wp.lock();
+            os << "  " << edge_sp->dst_->value_ << " | " << edge_sp->value_ << "\n";
+          }
+        }
+        os << ")\n";
+      }
+      return os;
+    }
 
   private:
 
