@@ -394,6 +394,72 @@ int main() {
   
   std::cout << lhs;
 
+  std::cout << "\nnow testing replace\nprinting before replace\n";
+  clear_me.InsertNode(1.1);
+  clear_me.InsertNode(2.2);
+  clear_me.InsertNode(3.3);
+  clear_me.InsertNode(4.4);
+  clear_me.InsertNode(5.5);
+  clear_me.InsertEdge(1.1, 1.1, 1);
+  clear_me.InsertEdge(1.1, 1.1, 2);
+  clear_me.InsertEdge(1.1, 1.1, -1);
+  clear_me.InsertEdge(2.2, 1.1, 1);
+  clear_me.InsertEdge(2.2, 2.2, 2);
+  clear_me.InsertEdge(3.3, 2.2, 3);
+  clear_me.InsertEdge(3.3, 3.3, 300);
+  clear_me.InsertEdge(1.1, 3.3, 60);
+  clear_me.InsertEdge(2.2, 3.3, 343);
+  clear_me.InsertEdge(4.4, 1.1, 4);
+  clear_me.InsertEdge(4.4, 4.4, 16);
+  clear_me.InsertEdge(2.2, 4.4, 8);
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+  std::cout << "now replacing 2.2 with 99.9\n";
+  clear_me.Replace(2.2, 99.9);
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << clear_me;
+
+  std::cout << "testing merge replace!!\n";
+  gdwg::Graph<char, int> ci_mr_g {};
+  ci_mr_g.InsertNode('a');
+  ci_mr_g.InsertNode('b');
+  ci_mr_g.InsertNode('c');
+  ci_mr_g.InsertNode('d');
+  ci_mr_g.InsertEdge('a', 'b', 3);
+  ci_mr_g.InsertEdge('c', 'b', 2);
+  ci_mr_g.InsertEdge('d', 'b', 4);
+  std::cout << ci_mr_g;
+
+  std::cout << "merging now\n";
+  ci_mr_g.MergeReplace('b', 'a');
+  std::cout << ci_mr_g;
+
+  std::cout << "testing merge replace variant 2!!\n";
+  gdwg::Graph<char, int> ci_mr_g2 {};
+  ci_mr_g2.InsertNode('a');
+  ci_mr_g2.InsertNode('b');
+  ci_mr_g2.InsertNode('c');
+  ci_mr_g2.InsertNode('d');
+  ci_mr_g2.InsertEdge('b', 'a', 3);
+  ci_mr_g2.InsertEdge('b', 'b', 6);
+  ci_mr_g2.InsertEdge('b', 'c', 2);
+  ci_mr_g2.InsertEdge('b', 'd', 4);
+  std::cout << ci_mr_g2;
+
+  std::cout << "merging now\n";
+  ci_mr_g2.MergeReplace('b', 'a');
+  std::cout << ci_mr_g2;  
+
+
+
+
+
   // std::cout << "testing reverse iterators!\n";
   // std::cout << "creating rb\n";
   // auto rb = clear_me.rbegin();

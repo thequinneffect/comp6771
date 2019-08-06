@@ -161,6 +161,78 @@ bool gdwg::Graph<N,E>::DeleteNode(const N& deletee) {
 }
 
 template <typename N, typename E>
+bool gdwg::Graph<N,E>::Replace(const N& old_data, const N& new_data) {
+    /* if the old node doesn't even exist, then throw */
+    auto old_node = nodes_.find(old_data);
+    if (old_node == nodes_.end()) {
+        throw std::runtime_error("Cannot call Graph::Replace on a node that doesn't exist");
+    }
+    /* if there is already a node with new data, return false */
+    if (IsNode(new_data)) return false;
+    /* create a new node with the new data */
+    std::cout << "inserting " << new_data << " into the graph in Replace\n";
+    InsertNode(new_data);
+    /* now get the same outgoing edges as the old node */
+    for (auto edge_wp : (*old_node)->outgoing_) {
+        /* only get the edge if it isn't expired */
+        if (!edge_wp.expired()) {
+            auto edge_sp = edge_wp.lock();
+            /* reflexive edges must be reflexive on new node and
+             * not be an edge between new node and old node */
+            if (edge_sp->dst_->value_ == old_data) {
+                InsertEdge(new_data, new_data, edge_sp->value_);
+            } else {
+                InsertEdge(new_data, edge_sp->dst_->value_, edge_sp->value_);
+            }
+        }
+    }
+    /* and now the same for the incoming edges */
+    for (auto edge_wp : (*old_node)->incoming_) {
+        /* only get the edge if it isn't expired */
+        if (!edge_wp.expired()) {
+            auto edge_sp = edge_wp.lock();
+            /* if we encounter a reflexive edge here, because we 
+             * already handled it above, we just skip it */
+            if (edge_sp->src_->value_ == old_data) continue;
+            InsertEdge(edge_sp->src_->value_, new_data, edge_sp->value_);
+        }
+    }
+    /* now delete the old node */
+    DeleteNode(old_data);
+    return true;
+}
+
+template <typename N, typename E>
+void gdwg::Graph<N,E>::MergeReplace(const N& replacee, const N& replacer) {
+    auto replacee_it = nodes_.find(replacee);
+    auto replacer_it = nodes_.find(replacer);
+    if (replacee_it == nodes_.cend() || replacer_it == nodes_.cend()) {
+        throw std::runtime_error("Cannot call Graph::MergeReplace on old or new data if they don't exist in the graph");
+    }
+    /* loop through the outgoing edges of replacer and add them to
+     * replacee (removing dupes as necessary) */
+    for (auto edge_wp : (*replacer_it)->outgoing_) {
+        /* only get the edge if it isn't expired */
+        if (!edge_wp.expired()) {
+            auto edge_sp = edge_wp.lock();
+            InsertEdge(replacee, edge_sp->dst_->value_, edge_sp->value_);
+        }
+    }
+    /* now do the same but for incoming edges of replacer */
+    for (auto edge_wp : (*replacer_it)->incoming_) {
+        /* only get the edge if it isn't expired */
+        if (!edge_wp.expired()) {
+            auto edge_sp = edge_wp.lock();
+            InsertEdge(edge_sp->src_->value_, replacee, edge_sp->value_);
+        }
+    }
+    /* now delete replacer from the graph */
+    DeleteNode(replacer);
+    /* and now, Replace replacee's value with replacer */
+    Replace(replacee, replacer);
+}
+
+template <typename N, typename E>
 void gdwg::Graph<N,E>::Clear() {
     nodes_.clear();
     edges_.clear();

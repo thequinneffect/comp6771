@@ -30,8 +30,6 @@ class Graph {
         using pointer = void;
         using difference_type = int;
 
-        // may have to double deref these things because they are iterators to smart ptrs to things
-        // 1 deref gives you smart ptr, 2 deref gives you thing
         reference operator*() const;
         const_iterator& operator++();
         const_iterator operator++(int) {
@@ -93,6 +91,8 @@ class Graph {
     bool InsertNode(const N& val);
     bool InsertEdge(const N& src, const N& dst, const E& w);
     bool DeleteNode(const N& deletee);
+    bool Replace(const N& old_data, const N& new_data);
+    void MergeReplace(const N& replacee, const N& replacer);
     void Clear();
     bool IsNode(const N& val) const;
     bool IsConnected(const N& src, const N& dst);
