@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 
+#include <cassert>
+
 #include "assignments/dg/graph.h"
 
 // Note: At the moment, there is no client.sampleout. Please do your own testing
@@ -256,6 +258,119 @@ int main() {
     std::cout << node << " ";
   }
   std::cout << "\n";
+
+  std::cout << "testing getconnected\n";
+  auto conn_vec1 = cs_il_graph_cpy.GetConnected('a');
+  auto conn_vec2 = clear_me.GetConnected(4.4);
+  std::cout << "printing connvec1\n";
+  for (auto node : conn_vec1) {
+    std::cout << node << " ";
+  }
+  std::cout << "\nnow printing connvec2\n";
+  for (auto node : conn_vec2) {
+    std::cout << node << " ";
+  }
+  std::cout << "\n";
+
+  std::cout << "testing getweights\n";
+  auto weight_vec1 = cs_il_graph_cpy.GetWeights('a', 'c');
+  auto weight_vec2 = clear_me.GetWeights(1.1, 1.1);
+  std::cout << "printing weightvec1\n";
+  for (auto e : weight_vec1) {
+    std::cout << e << " ";
+  }
+  std::cout << "\nnow printing weightvec2\n";
+  for (auto e : weight_vec2) {
+    std::cout << e << " ";
+  }
+  std::cout << "\n";
+
+  std::cout << "testing find!\n";
+  gdwg::Graph<std::string, int> gsi;
+  std::string a1{"e"};
+  std::string a2{"i"};
+  int e = 8;
+  auto it = gsi.find(a1, a2, e);
+  assert(it == gsi.end());
+  gsi.InsertNode(a1);
+  gsi.InsertNode(a2);
+  gsi.InsertEdge(a1, a2, e);
+  auto it2 = gsi.find(a1, a2, e);
+  assert(it2 != gsi.end());
+  auto [s, d, w] = *it2;
+  std::cout << "found the searched for edge: [" << s << ", " << d << ", " << w << "]\n";
+
+  std::cout << "test erasing by manually specifying edge\n";
+  std::cout << "erasing non existant edge should fail: " << clear_me.erase(1.1, 4.4, 7) << "\n";
+  std::cout << "erasing existant edge should succeed: " << clear_me.erase(1.1, 3.3, 60) << "\n";
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << "test erasing via iterator\n";
+  auto end_it = clear_me.find(1.1, 4.4, 7);
+  assert(end_it == clear_me.cend());
+  auto end_it2 = clear_me.erase(end_it);
+  assert(end_it2 == clear_me.end());
+  auto found_it = clear_me.find(2.2, 4.4, 8);
+  assert(found_it != clear_me.cend());
+  clear_me.erase(found_it);
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+  std::cout << "testing erasing last\n";
+  auto last_e = clear_me.find(4.4, 4.4, 16);
+  auto found_it2 = clear_me.erase(last_e);
+  assert(found_it2 == clear_me.cend());
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << "test mass erasing then re-printing\n";
+  clear_me.erase(1.1, 1.1, -1);
+  clear_me.erase(1.1, 1.1, 1);
+  clear_me.erase(2.2, 1.1, 1);
+  clear_me.erase(2.2, 2.2, 2);
+  clear_me.erase(2.2, 3.3, 343);
+  clear_me.erase(3.3, 3.3, 300);
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+  
+  std::cout << "test mass erasing, printing, readding, printing\n";
+  clear_me.InsertEdge(1.1, 1.1, -1);
+  clear_me.InsertEdge(1.1, 1.1, 1);
+  clear_me.InsertEdge(2.2, 1.1, 1);
+  clear_me.InsertEdge(2.2, 3.3, 343);
+  clear_me.InsertEdge(3.3, 3.3, 300);
+  for (auto it = clear_me.begin(); it != clear_me.end(); ++it) {
+    if (std::get<0>(*it) == 2.2 && std::get<1>(*it) == 1.1)  {
+      auto new_it = clear_me.erase(it);
+      for (; new_it != clear_me.end(); ++new_it) {
+        auto [from, to, weight] = *new_it;
+        std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+      }
+      break;
+    }
+    auto [from, to, weight] = *it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << "\n";
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << "testing reverse iterators!\n";
+  // for (auto rit = clear_me.rbegin(); rit != clear_me.rend(); ++rit) {
+  //   auto [from, to, weight] = *rit;
+  //   std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  // }
 
 
   // std::cout << "inserting edge 7.0, 2.3, 6 should fail: ";

@@ -206,6 +206,53 @@ std::vector<N> gdwg::Graph<N,E>::GetNodes() {
 }
 
 template <typename N, typename E>
+std::vector<N> gdwg::Graph<N,E>::GetConnected(const N& src) {
+    /* see if the src node even exists, throw if not */
+    auto src_it = this->nodes_.find(src);
+    if (src_it == this->nodes_.end()) {
+        throw std::out_of_range("Cannot call Graph::GetConnected if src doesn't exist in the graph");
+    }
+    std::set<N> node_set {};
+    /* loop through all the outgoing edges of src */
+    for (auto oe_it = (*src_it)->outgoing_.begin();
+        oe_it != (*src_it)->outgoing_.end(); ++oe_it) {
+        if (oe_it->expired()) {
+            oe_it = (*src_it)->outgoing_.erase(oe_it);
+            continue;
+        } else {
+            auto edge_sp = oe_it->lock();
+            node_set.insert(edge_sp->dst_->value_);
+        }
+    }
+    return std::vector<N>{node_set.begin(), node_set.end()};
+}
+
+// TODO: refactor this and ^ search part into a templated method if have time
+template <typename N, typename E>
+std::vector<E> gdwg::Graph<N,E>::GetWeights(const N& src, const N& dst) {
+    /* see if both nodes exists in the graph, if not throw */
+    auto src_it = this->nodes_.find(src);
+    if (src_it == this->nodes_.end() || !IsNode(dst)) {
+        throw std::out_of_range("Cannot call Graph::GetWeights if src or dst node don't exist in the graph");
+    }
+    std::set<E> edge_set {};
+    /* loop through all the outgoing edges of src */
+    for (auto oe_it = (*src_it)->outgoing_.begin();
+        oe_it != (*src_it)->outgoing_.end(); ++oe_it) {
+        if (oe_it->expired()) {
+            oe_it = (*src_it)->outgoing_.erase(oe_it);
+            continue;
+        } else {
+            auto edge_sp = oe_it->lock();
+            if (edge_sp->dst_->value_ == dst) {
+                edge_set.insert(edge_sp->value_);
+            }
+        }
+    }
+    return std::vector<E>{edge_set.begin(), edge_set.end()};
+}
+
+template <typename N, typename E>
 typename gdwg::Graph<N,E>::const_iterator 
 gdwg::Graph<N,E>::find(const N& src, const N& dst, const E& w) {
     for (auto it = cbegin(); it != cend(); ++it) {
@@ -219,19 +266,36 @@ gdwg::Graph<N,E>::find(const N& src, const N& dst, const E& w) {
 }
 
 template <typename N, typename E>
-typename gdwg::Graph<N,E>::const_iterator::reference 
-gdwg::Graph<N,E>::const_iterator::operator*() const {
-    // std::cout << "const_iterator operator* called\n";
-    const N& src_val = (*node_it_)->value_;
-    // std::cout << "deref'ing for src was fine\n";
-    if (edge_it_->expired()) std::cout << "edge_it_ is expired!\n";
-    auto edge_sp = (*edge_it_).lock();
-    // std::cout << "locking  was fine\n";
-    const N& dst_val = edge_sp->dst_->value_;
-    // std::cout << "deref'ing for dst was fine\n";
-    const E& edge_val = edge_sp->value_;
-    // std::cout << "deref'ing for edge was fine\n";
-    return {src_val, dst_val, edge_val};
+bool gdwg::Graph<N,E>::erase(const N& src, const N& dst, const E& w) {
+    auto edge_it = find(src, dst, w);
+    if (edge_it == cend()) return false;
+    erase(edge_it); return true;
+}
+
+template <typename N, typename E>
+typename gdwg::Graph<N,E>::const_iterator 
+gdwg::Graph<N,E>::erase(const_iterator it) {
+    if (it == end()) return end();
+    /* save a copy of the current iterator as we need to delete it,
+     * and increment it because we need to return it */
+    auto deletee_it = it++;
+    /* now search the set of shared_ptr to Edges until we find this
+     * edge, then delete it */
+    for (auto edge_it = edges_.begin();
+        edge_it != edges_.end(); ++edge_it) {
+        
+        auto src = (*edge_it)->src_->value_;
+        auto dst = (*edge_it)->dst_->value_;
+        auto w = (*edge_it)->value_;
+        if (src == std::get<0>(*deletee_it) 
+            && dst == std::get<1>(*deletee_it) 
+            && w == std::get<2>(*deletee_it)) 
+        {
+            edges_.erase(edge_it);
+            break;
+        }
+    }
+    return it;
 }
 
 template <typename N, typename E>
@@ -325,4 +389,43 @@ typename gdwg::Graph<N,E>::const_iterator& gdwg::Graph<N,E>::const_iterator::ope
         }
     }
     return *this;
+}
+
+// template <typename N, typename E>
+// typename gdwg::Graph<N,E>::const_iterator& gdwg::Graph<N,E>::const_iterator::operator--() {
+//     /* increment the edge iterator */
+//     --edge_it_;
+
+//     /* it is now possible that edge_it_ is actually the rend() iterator
+//      * of the current edges container (i.e. node->outgoing set) we are up
+//      * to OR it is an expired edge (weak pointer it refers to is expired) */
+//     while (edge_it_ == (*node_it_)->outgoing_.rend() || edge_it_->expired()) {
+//         if (edge_it_ == (*node_it_)->outgoing_.rend()) {
+//             --node_it_;
+//             if (node_it_ == node_end_it_) {
+//                 edge_it_ = typename std::set<std::weak_ptr<Edge>>::iterator{};
+//                 return *this;
+//             }
+//             edge_it_ = (*node_it_)->outgoing_.begin();
+//         } else {
+//             edge_it_ = (*node_it_)->outgoing_.erase(edge_it_);
+//         }
+//     }
+//     return *this;
+// }
+
+template <typename N, typename E>
+typename gdwg::Graph<N,E>::const_iterator::reference 
+gdwg::Graph<N,E>::const_iterator::operator*() const {
+    // std::cout << "const_iterator operator* called\n";
+    const N& src_val = (*node_it_)->value_;
+    // std::cout << "deref'ing for src was fine\n";
+    if (edge_it_->expired()) std::cout << "edge_it_ is expired!\n";
+    auto edge_sp = (*edge_it_).lock();
+    // std::cout << "locking  was fine\n";
+    const N& dst_val = edge_sp->dst_->value_;
+    // std::cout << "deref'ing for dst was fine\n";
+    const E& edge_val = edge_sp->value_;
+    // std::cout << "deref'ing for edge was fine\n";
+    return {src_val, dst_val, edge_val};
 }

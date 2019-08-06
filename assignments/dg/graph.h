@@ -88,8 +88,11 @@ class Graph {
     bool IsNode(const N& val) const;
     bool IsConnected(const N& src, const N& dst);
     std::vector<N> GetNodes();
-
+    std::vector<N> GetConnected(const N& src);
+    std::vector<E> GetWeights(const N& src, const N& dst);
     const_iterator find(const N&, const N&, const E&);
+    bool erase(const N& src, const N& dst, const E& w);
+    const_iterator erase(const_iterator it);
 
     /* iterator methods */
     /* auto generate our reverse iterator from normal iterator */
@@ -117,7 +120,7 @@ class Graph {
                    std::tie(b->src_->value_, b->dst_->value_, b->value_);
           } else if constexpr (std::is_same<smart_ptr, std::weak_ptr<Edge>>::value) {
             // TODO: remove this line after testing
-            if (a.expired() || b.expired()) assert(!"WrapperComp got an expired wp!\n");
+            if (a.expired() || b.expired()) return false;
             auto a_sp = a.lock();
             auto b_sp = b.lock();
             return std::tie(a_sp->src_->value_, a_sp->dst_->value_, a_sp->value_) < 
