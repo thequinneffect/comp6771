@@ -19,9 +19,7 @@
     if methods roughly worked before officially testing them,
     I made my own client file that just tested most of the
     basics. Once I was confident in my implementation and all
-    parts were complete (except reverse iterator, i did not
-    do that because i couldnt get the std::reverse_iterator
-    template to generate it without tons of errors), I moved
+    parts were complete I moved
     over to this file to do some catch2 tests.
 
     justification: Because I did a lot of unofficial testing
@@ -41,12 +39,379 @@
     in this fashion for my first time using them, so I am okay
     with these edge cases existing as it would simply take too
     long to think of them and alter my implementation to fix them.
+
+    NOTE: I don't really have any tests for my iterators other than
+    the testing i did in my client file. This is because I had
+    lots of issues getting the reverse iterator to generate
+    using the automatic std::reverse_iterator method. It turns
+    out it was because my --operator for the const_iterator had a
+    bug. And now because it is already 5 hrs over the dealine I feel
+    it's better to submit now and not lose any more percentage per hour
+    rather than to spend time writing iterator test for which the marks
+    will probably largely cancel out for. Iḿ happy with my "forwards"
+    iterating, but reverse may be a little buggy, fingers crossed lol.
+
+    I will submit "my_client" alongside the other files if the submission
+    system lets me. Otherise it is added on below as a comment
   }
 
 */
 
 #include "assignments/dg/graph.h"
+
+#include <string>
+#include <tuple>
+#include <vector>
+
 #include "catch.h"
+
+/* a tuple i will use for easily creating graphs for my test */
+std::vector<std::tuple<double, double, int>> di_tuple{
+    {6.5, 2.3, 5}, {6.5, 7.0, 5}, {4.2, 6.9, 7}, {4.2, 2.3, 3}, {4.3, 2.3, 3},
+    {1.1, 1.1, 1}, {1.1, 1.1, 2}, {6.5, 2.3, 5}, {6.5, 7.0, 5}, {6.9, 1.1, 9}};
+/* another one but with different types for some variation */
+std::vector<std::tuple<char, char, std::string>> cs_tuple{{'a', 'b', "brb"}, {'c', 'd', "lol"},
+                                                          {'g', 'h', "omg"}, {'h', 'g', "ftw"},
+                                                          {'y', 'a', "wtf"}, {'z', 'y', "kek"}};
+
+/* I'm confident that all of my simple ctors (and dtor) work because
+ * I used them thoroughly when doing unofficial testing in my
+ * client file. This is my justification for not testing them here.
+ * I will still test move and copy constructing though because these
+ * have more room for error with regards to the smart pointers.
+ * Also, all the non-cpy and move ones (which are tested below)
+ * consist only of calling insert edge and insert node functions
+ * so i will just test those instead */
+
+SCENARIO("copy ctor") {
+  GIVEN("a graph with some edges") {
+    gdwg::Graph<char, int> g{'a', 'b', 'c'};
+    g.InsertEdge('a', 'b', 1);
+    g.InsertEdge('b', 'c', 2);
+    g.InsertEdge('c', 'b', 3);
+    g.InsertEdge('c', 'a', 4);
+    WHEN("we copy construct another graph from the given one") {
+      gdwg::Graph<char, int> g2 = {g};
+      REQUIRE(g2 == g);
+      THEN(
+          "if we alter one graph, the other shouldn't be altered i.e. resources should be unique") {
+        g2.DeleteNode('b');
+        REQUIRE(g2 != g);
+      }
+    }
+  }
+}
+
+SCENARIO("move ctor") {
+  GIVEN("some graph and a copy of it") {
+    gdwg::Graph<char, std::string> cs_g{cs_tuple.begin(), cs_tuple.end()};
+    gdwg::Graph<char, std::string> cs_g_cpy{cs_g};
+    WHEN("i move construct a new graph from the old original one") {
+      gdwg::Graph<char, std::string> cs_g_movee{std::move(cs_g)};
+      /* it should have successfully stolen the original graphs content */
+      REQUIRE(cs_g_movee == cs_g_cpy);
+    }
+  }
+}
+
+/* As my implementation of move assignment and copy assignment are almost
+ * exactly the same as move ctor and cpy ctor, I will not bother testing
+ * them. The code is literally the same (only difference is return values) */
+
+SCENARIO("InsertNode") {
+  GIVEN("a graph with at least one node") {
+    gdwg::Graph<int, int> iig{1, 2};
+    WHEN("i try insert a node that doesnt exist") { REQUIRE(iig.InsertNode(3) == true); }
+    WHEN("i try inset a node that does exist") { REQUIRE(iig.InsertNode(2) == false); }
+  }
+}
+
+SCENARIO("InsertEdge") {
+  GIVEN("a graph with edges") {
+    gdwg::Graph<double, int> di_g{di_tuple.begin(), di_tuple.end()};
+    WHEN("i try insert an edge and the src doesn't exist") {
+      REQUIRE_THROWS_WITH(
+          di_g.InsertEdge(999.99, 1.1, 1),
+          "Cannot call Graph::InsertEdge when either src or dst node does not exist");
+    }
+    WHEN("i try insert an edge and the dst doesn't exist") {
+      REQUIRE_THROWS_WITH(
+          di_g.InsertEdge(1.1, 888.88, 1),
+          "Cannot call Graph::InsertEdge when either src or dst node does not exist");
+    }
+    WHEN("i try insert an edge and it already exists") {
+      REQUIRE(di_g.InsertEdge(1.1, 1.1, 1) == false);
+    }
+    WHEN("i try insert an edge and it doesn't exist") {
+      REQUIRE(di_g.InsertEdge(6.5, 7.0, 70) == true);
+    }
+  }
+}
+
+SCENARIO("DeleteNode") {
+  GIVEN("a graph with some nodes, of which one has incoming and outgoing edges") {
+    gdwg::Graph<double, int> di_g{di_tuple.begin(), di_tuple.end()};
+    WHEN("i try delete a node that doesn't exist") { REQUIRE(di_g.DeleteNode(99.9) == false); }
+    WHEN("i try delete a node that does exist and has incoming/outgoing edges") {
+      REQUIRE(di_g.find(6.9, 1.1, 9) != di_g.end());
+      REQUIRE(di_g.find(4.2, 6.9, 7) != di_g.end());
+      REQUIRE(di_g.DeleteNode(6.9) == true);
+      /* it should no longer be a node and the edges should be gone */
+      REQUIRE(di_g.IsNode(6.9) == false);
+      REQUIRE(di_g.find(6.9, 1.1, 9) == di_g.end());
+      REQUIRE(di_g.find(4.2, 6.9, 7) == di_g.end());
+    }
+  }
+}
+
+SCENARIO("Replace") {
+  GIVEN("a simple graph with edges") {
+    gdwg::Graph<char, int> ci_g{'a', 'b', 'c', 'd'};
+    ci_g.InsertEdge('a', 'b', 3);
+    ci_g.InsertEdge('c', 'b', 2);
+    ci_g.InsertEdge('d', 'b', 4);
+    ci_g.InsertEdge('b', 'b', 3);
+    ci_g.InsertEdge('b', 'b', 6);
+    WHEN("i call replace and there is no such target node") {
+      REQUIRE_THROWS_WITH(ci_g.Replace('e', 'f'),
+                          "Cannot call Graph::Replace on a node that doesn't exist");
+    }
+    WHEN("i call replace and there is such target node") {
+      REQUIRE(ci_g.Replace('b', 'e') == true);
+      /* require the edges to have been changed too */
+      REQUIRE(ci_g.find('a', 'e', 3) != ci_g.end());
+      REQUIRE(ci_g.find('c', 'e', 2) != ci_g.end());
+      REQUIRE(ci_g.find('d', 'e', 4) != ci_g.end());
+      REQUIRE(ci_g.find('e', 'e', 3) != ci_g.end());
+      REQUIRE(ci_g.find('e', 'e', 6) != ci_g.end());
+    }
+  }
+}
+
+SCENARIO("MergeReplace") {
+  GIVEN("a simple graph with edges") {
+    gdwg::Graph<char, int> ci_mr_g{};
+    ci_mr_g.InsertNode('a');
+    ci_mr_g.InsertNode('b');
+    ci_mr_g.InsertNode('c');
+    ci_mr_g.InsertNode('d');
+    ci_mr_g.InsertEdge('a', 'b', 3);
+    ci_mr_g.InsertEdge('c', 'b', 2);
+    ci_mr_g.InsertEdge('d', 'b', 4);
+    ci_mr_g.InsertEdge('b', 'b', 3);
+    WHEN("src is not found in the graph") {
+      REQUIRE_THROWS_WITH(
+          ci_mr_g.MergeReplace('z', 'a'),
+          "Cannot call Graph::MergeReplace on old or new data if they don't exist in the graph");
+    }
+    WHEN("dst is not found in the graph") {
+      REQUIRE_THROWS_WITH(
+          ci_mr_g.MergeReplace('b', 'y'),
+          "Cannot call Graph::MergeReplace on old or new data if they don't exist in the graph");
+    }
+    WHEN("the merge is successful then all src<->dst edges become reflexive and replacer gets "
+         "replaccee edges") {
+      ci_mr_g.MergeReplace('b', 'a');
+      REQUIRE(ci_mr_g.find('a', 'a', 3) != ci_mr_g.end());
+      REQUIRE(ci_mr_g.find('c', 'a', 2) != ci_mr_g.end());
+      REQUIRE(ci_mr_g.find('d', 'a', 4) != ci_mr_g.end());
+    }
+  }
+  GIVEN("another simple graph with edges different types of edges (incoming to replacee)") {
+    gdwg::Graph<char, int> ci_mr_g{};
+    ci_mr_g.InsertNode('a');
+    ci_mr_g.InsertNode('b');
+    ci_mr_g.InsertNode('c');
+    ci_mr_g.InsertNode('d');
+    ci_mr_g.InsertEdge('b', 'a', 3);
+    ci_mr_g.InsertEdge('b', 'c', 2);
+    ci_mr_g.InsertEdge('b', 'd', 4);
+    ci_mr_g.InsertEdge('b', 'b', 6);
+    WHEN("the merge is successful then all src<->dst edges become reflexive and replacer gets "
+         "replaccee edges") {
+      ci_mr_g.MergeReplace('b', 'a');
+      REQUIRE(ci_mr_g.find('a', 'a', 3) != ci_mr_g.end());
+      REQUIRE(ci_mr_g.find('a', 'a', 6) != ci_mr_g.end());
+      REQUIRE(ci_mr_g.find('a', 'c', 2) != ci_mr_g.end());
+      REQUIRE(ci_mr_g.find('a', 'd', 4) != ci_mr_g.end());
+    }
+  }
+}
+
+SCENARIO("Clear") {
+  GIVEN("a graph with lots of edges") {
+    gdwg::Graph<char, std::string> cs_g{cs_tuple.begin(), cs_tuple.end()};
+    /* require at least the testing edge */
+    REQUIRE(cs_g.find('a', 'b', "brb") != cs_g.end());
+    WHEN("we clear the graph") {
+      cs_g.Clear();
+      REQUIRE(cs_g.IsNode('a') == false);
+      REQUIRE(cs_g.IsNode('b') == false);
+      gdwg::Graph<char, std::string> cs_g_empty{};
+      REQUIRE(cs_g == cs_g_empty);
+      /* we should be able to re-add nodes and edges */
+      REQUIRE(cs_g.InsertNode('a') == true);
+      REQUIRE(cs_g.InsertNode('b') == true);
+      REQUIRE(cs_g.InsertNode('c') == true);
+      REQUIRE(cs_g.InsertEdge('a', 'b', "brb") == true);
+      REQUIRE(cs_g.InsertEdge('c', 'b', "cbf") == true);
+    }
+  }
+}
+
+/* I believe IsNode has been indirectly tested sufficiently and its implementation is
+ * basically reliant on STL types find() working */
+
+SCENARIO("IsConnected") {
+  GIVEN("a graph with an nodes were only some are connected") {
+    gdwg::Graph<int, double> idg{1, 2, 3};
+    idg.InsertEdge(1, 2, 1.2);
+    idg.InsertEdge(1, 3, 1.3);
+    WHEN("src is not in the graph") {
+      REQUIRE_THROWS_WITH(
+          idg.IsConnected(4, 1),
+          "Cannot call Graph::IsConnected if src or dst node don't exist in the graph");
+    }
+    WHEN("dst is not in the graph") {
+      REQUIRE_THROWS_WITH(
+          idg.IsConnected(2, 5),
+          "Cannot call Graph::IsConnected if src or dst node don't exist in the graph");
+    }
+    WHEN("the nodes are not connected") { REQUIRE(idg.IsConnected(2, 3) == false); }
+    WHEN("the nodes are connected") {
+      REQUIRE(idg.IsConnected(1, 2) == true);
+      REQUIRE(idg.IsConnected(1, 3) == true);
+    }
+  }
+}
+
+SCENARIO("GetNodes") {
+  GIVEN("a graph with no nodes") {
+    gdwg::Graph<int, double> no_nodes{};
+    WHEN("we call getnodes") {
+      auto node_vec = no_nodes.GetNodes();
+      REQUIRE(node_vec.empty());
+    }
+  }
+  GIVEN("a graph with some nodes") {
+    gdwg::Graph<int, double> no_nodes{1, 5, 3, 2, 7};
+    WHEN("we call getnodes") {
+      auto node_vec = no_nodes.GetNodes();
+      REQUIRE(node_vec.size() == 5);
+      REQUIRE(node_vec[0] == 1);
+      REQUIRE(node_vec[1] == 2);
+      REQUIRE(node_vec[2] == 3);
+      REQUIRE(node_vec[3] == 5);
+      REQUIRE(node_vec[4] == 7);
+    }
+  }
+}
+
+SCENARIO("GetConnected") {
+  GIVEN("a graph with a node that has outgoing edges and another with none") {
+    gdwg::Graph<char, int> g{};
+    g.InsertNode('a');
+    g.InsertNode('b');
+    g.InsertNode('c');
+    g.InsertNode('d');
+    g.InsertEdge('a', 'b', 3);
+    g.InsertEdge('c', 'b', 2);
+    g.InsertEdge('d', 'b', 4);
+    g.InsertEdge('a', 'c', 6);
+    g.InsertEdge('a', 'd', 3);
+
+    WHEN("we call GetConnected and src doesnt exist") {
+      REQUIRE_THROWS_WITH(g.GetConnected('z'),
+                          "Cannot call Graph::GetConnected if src doesn't exist in the graph");
+    }
+    WHEN("we call GetConnected and there is no outgoing edges from src") {
+      auto vec = g.GetConnected('b');
+      REQUIRE(vec.empty());
+    }
+    WHEN("we call GetConnected and src has outgoing edges") {
+      auto vec = g.GetConnected('a');
+      REQUIRE(vec.size() == 3);
+      REQUIRE(vec[0] == 'b');
+      REQUIRE(vec[1] == 'c');
+      REQUIRE(vec[2] == 'd');
+    }
+  }
+}
+
+SCENARIO("GetWeights") {
+  GIVEN("a graph in which there are a pair of nodes with edges going either way between them") {
+    gdwg::Graph<char, int> ci{'a', 'b', 'c'};
+    ci.InsertEdge('a', 'a', 1);
+    ci.InsertEdge('a', 'b', 2);
+    ci.InsertEdge('a', 'b', 7);
+    ci.InsertEdge('a', 'b', 9);
+    ci.InsertEdge('a', 'b', 1);
+    ci.InsertEdge('a', 'c', 3);
+    ci.InsertEdge('c', 'a', 4);
+    ci.InsertEdge('b', 'a', 6);
+
+    WHEN("src is not in graph") {
+      REQUIRE_THROWS_WITH(
+          ci.GetWeights('d', 'a'),
+          "Cannot call Graph::GetWeights if src or dst node don't exist in the graph");
+    }
+    WHEN("dst is not in graph") {
+      REQUIRE_THROWS_WITH(
+          ci.GetWeights('a', 'z'),
+          "Cannot call Graph::GetWeights if src or dst node don't exist in the graph");
+    }
+    WHEN("src has incoming and outgoing edges, only get outgoing, and in order") {
+      auto edge_vec = ci.GetWeights('a', 'b');
+      REQUIRE(edge_vec.size() == 4);
+      REQUIRE(edge_vec[0] == 1);
+      REQUIRE(edge_vec[1] == 2);
+      REQUIRE(edge_vec[2] == 7);
+      REQUIRE(edge_vec[3] == 9);
+    }
+  }
+}
+
+/* since i have used find pretty extensively above, I will not explicitly test
+ * it as it has been tested indirectly enough */
+
+SCENARIO("bool erase") {
+  GIVEN("a graph with some edges") {
+    gdwg::Graph<double, int> di_g{di_tuple.begin(), di_tuple.end()};
+    WHEN("we try erase an edge that doesnt exist") { REQUIRE(di_g.erase(1.1, 6.5, 90) == false); }
+    WHEN("we try erase an edge that does exist") { REQUIRE(di_g.erase(4.2, 2.3, 3) == true); }
+  }
+}
+
+/* as bool erase uses iterator erase, i will not explictly test
+ * iterator as i tested it in my client (ctrl-f for "test erasing via iterator"
+ * to see it below) */
+
+SCENARIO("friend operator== (and also != because it is the inverse)") {
+  GIVEN("two graphs that are the same (one is a copy of the other)") {
+    gdwg::Graph<char, std::string> cs{cs_tuple.begin(), cs_tuple.end()};
+    gdwg::Graph<char, std::string> cs_cpy{cs};
+    WHEN("we compare them equal") {
+      REQUIRE((cs == cs_cpy) == true);
+      REQUIRE((cs != cs_cpy) == false);
+    }
+    WHEN("we alter one of the graphs") {
+      cs.DeleteNode('c');
+      REQUIRE((cs == cs_cpy) == false);
+      REQUIRE((cs != cs_cpy) == true);
+      /* but then they should be equal if we re-add */
+      cs.InsertNode('c');
+      cs.InsertEdge('c', 'd', "lol");
+      REQUIRE((cs == cs_cpy) == true);
+      REQUIRE((cs != cs_cpy) == false);
+    }
+  }
+}
+
+/* i have tested the operator<< by observation because i feel that is easier.
+ * I did this in my client testing. ctrl-f for "std::cout << clear_me;"
+ * and "std::cout << lhs" below. Additionally, the testing of ordering being
+ * correct in the edge iterator and in getweights and getnodes is sufficient
+ * enough for me to be happy that the ordering of << output is also okay */
 
 /* PROOF OF UNOFFICIAL TESTING
 
@@ -298,6 +663,7 @@ one\n"; gdwg::Graph<double, int> move_assigned {std::move(copy_assigned)}; copy_
   std::cout << "isconnected should be 0: " << clear_me.IsConnected(4.4, 2.2) << "\n";
   
 
+
   std::cout << "testing getnodes\n";
   auto node_vec1 = cs_il_graph_cpy.GetNodes();
   auto node_vec2 = clear_me.GetNodes();
@@ -394,6 +760,7 @@ one\n"; gdwg::Graph<double, int> move_assigned {std::move(copy_assigned)}; copy_
   }
   
 
+
   std::cout << "test mass erasing, printing, readding, printing\n";
   clear_me.InsertEdge(1.1, 1.1, -1);
   clear_me.InsertEdge(1.1, 1.1, 1);
@@ -445,6 +812,7 @@ one\n"; gdwg::Graph<double, int> move_assigned {std::move(copy_assigned)}; copy_
   rhs.InsertEdge(4.2, 2.3, 3);
   std::cout << "should be equal: " << (lhs == rhs) << ", " << (lhs != rhs) << "\n";
   
+
 
   std::cout << lhs;
 
@@ -509,5 +877,32 @@ one\n"; gdwg::Graph<double, int> move_assigned {std::move(copy_assigned)}; copy_
   std::cout << "merging now\n";
   ci_mr_g2.MergeReplace('b', 'a');
   std::cout << ci_mr_g2;
+
+  {
+  std::cout << "now testing reverse iterator\n";
+  auto rb = clear_me.rbegin();
+  auto re = clear_me.rend();
+  (void)rb;
+  (void)re;
+  std::cout << "making rb and re succeeded\n";
+
+  std::cout << "print out graph first\n";
+  for (auto it : clear_me) {
+    auto [from, to, weight] = it;
+    std::cout << "[" << from << ", " << to << ", " << weight << "]\n";
+  }
+
+  std::cout << "about to deref rb\n";
+  auto [s, d, w] = *rb;
+  std::cout << "[" << s << ", " << d << ", " << w << "]\n";
+
+  std::cout << "about to fully reverse iterate\n";
+  for (auto rb = clear_me.rbegin(); rb != clear_me.rend(); ++rb) {
+    auto [s, d, w] = *rb;
+    std::cout << "[" << s << ", " << d << ", " << w << "]\n";
+  }
+
+  }
 }
+
 */

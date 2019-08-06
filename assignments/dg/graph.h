@@ -4,6 +4,7 @@
 #include <initializer_list>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -135,18 +136,20 @@ class Graph {
   }
   friend std::ostream& operator<<(std::ostream& os, const gdwg::Graph<N, E>& g) {
     /* loop through the nodes_ set */
+    std::stringstream ss;
     for (auto& node_up : g.nodes_) {
-      os << node_up->value_ << " (\n";
+      ss << node_up->value_ << " (\n";
       /* now for each outgoing edge that node has, print it out */
       for (auto edge_wp : node_up->outgoing_) {
         /* but only if the edge isn't expired */
         if (!edge_wp.expired()) {
           auto edge_sp = edge_wp.lock();
-          os << "  " << edge_sp->dst_->value_ << " | " << edge_sp->value_ << "\n";
+          ss << "  " << edge_sp->dst_->value_ << " | " << edge_sp->value_ << "\n";
         }
       }
-      os << ")\n";
+      ss << ")\n";
     }
+    os << ss.str();
     return os;
   }
 
